@@ -29,6 +29,8 @@ asset_pipeline [REMOVED (ruby only)]
 widgets [NO CHANGE]
 ```
 
+All directories are ignored by default. If you want a directory to be interpreted as a collection of pages you need to specify it in the `collections` hash.
+
 data.yml
 --------
 
