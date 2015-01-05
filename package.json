@@ -30,7 +30,11 @@
   "homepage": "https://github.com/coolaj86/deardesi",
   "dependencies": {
     "bluebird": "^2.5.3",
+    "body-parser": "^1.10.1",
     "circular-json": "^0.1.6",
+    "connect": "^3.3.3",
+    "connect-query": "^0.2.0",
+    "connect-send-json": "^1.0.0",
     "escape-string-regexp": "^1.0.2",
     "foreachasync": "^5.0.2",
     "json2yaml": "^1.0.3",
@@ -40,6 +44,7 @@
     "require-yaml": "0.0.1",
     "require-yamljs": "^1.0.1",
     "secret-utils": "^1.0.2",
+    "serve-static": "^1.7.2",
     "walk": "^2.3.5",
     "yaml": "^0.2.3",
     "yamljs": "^0.2.1"
