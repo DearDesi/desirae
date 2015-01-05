@@ -1,0 +1,47 @@
+{
+  "name": "deardesi",
+  "version": "0.1.0",
+  "description": "An in-browser knockoff of the Ruhoh static blog generator. (similar to Jekyll, Octopress, Nanoc, etc)",
+  "main": "server.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git@github.com:coolaj86/deardesi.git"
+  },
+  "keywords": [
+    "dear",
+    "deardesi",
+    "desi",
+    "ruhoh",
+    "ruhoh",
+    "blog",
+    "static",
+    "jekyll",
+    "octopress",
+    "nanoc"
+  ],
+  "author": "AJ ONeal",
+  "license": "Apache2",
+  "bugs": {
+    "url": "https://github.com/coolaj86/deardesi/issues"
+  },
+  "homepage": "https://github.com/coolaj86/deardesi",
+  "dependencies": {
+    "bluebird": "^2.5.3",
+    "circular-json": "^0.1.6",
+    "escape-string-regexp": "^1.0.2",
+    "foreachasync": "^5.0.2",
+    "json2yaml": "^1.0.3",
+    "markdown": "^0.5.0",
+    "marked": "^0.3.2",
+    "mustache": "^1.0.0",
+    "require-yaml": "0.0.1",
+    "require-yamljs": "^1.0.1",
+    "secret-utils": "^1.0.2",
+    "walk": "^2.3.5",
+    "yaml": "^0.2.3",
+    "yamljs": "^0.2.1"
+  }
+}

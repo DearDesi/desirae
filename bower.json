@@ -1,0 +1,40 @@
+{
+  "name": "deardesi",
+  "version": "1.0.0",
+  "authors": [
+    "AJ ONeal <awesome@coolaj86.com>"
+  ],
+  "description": "A blogging platform in the browser. Wow!",
+  "main": "deardesi.js",
+  "moduleType": [
+    "globals",
+    "node"
+  ],
+  "keywords": [
+    "dear",
+    "desi",
+    "deardesi",
+    "blog",
+    "blogging",
+    "platform",
+    "browser"
+  ],
+  "license": "Apache2",
+  "homepage": "http://github.com/coolaj86/deardesi",
+  "ignore": [
+    "**/.*",
+    "node_modules",
+    "bower_components",
+    "test",
+    "tests"
+  ],
+  "dependencies": {
+    "mustache": "~0.8.2",
+    "bluebird": "~2.5.2",
+    "rsvp": "~3.0.16",
+    "escape-string-regexp": "~1.0.2",
+    "marked": "~0.3.2",
+    "js-yaml": "~3.2.5",
+    "path": "~3.46.1"
+  }
+}
