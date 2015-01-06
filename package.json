@@ -45,7 +45,7 @@
     "require-yamljs": "^1.0.1",
     "secret-utils": "^1.0.2",
     "serve-static": "^1.7.2",
-    "walk": "^2.3.5",
+    "walk": "^2.3.9",
     "yaml": "^0.2.3",
     "yamljs": "^0.2.1"
   }

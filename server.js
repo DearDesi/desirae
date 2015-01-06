@@ -2,23 +2,20 @@
 
 require('require-yaml');
 
-var PromiseA = require('bluebird').Promise
-  , connect = require('connect')
-  , query = require('connect-query')
-  , bodyParser = require('body-parser')
+var connect     = require('connect')
+  //, PromiseA  = require('bluebird').Promise
+  , query       = require('connect-query')
+  , bodyParser  = require('body-parser')
   , serveStatic = require('serve-static')
-  , forEachAsync = require('foreachasync').forEachAsync
-  , send = require('connect-send-json')
+  , send        = require('connect-send-json')
 
-  , app = connect()
-  , walk = require('./lib/walk')
+  , app         = connect()
+  , walk        = require('./lib/fsapi').walk
+  , getfs       = require('./lib/fsapi').getfs
 
-  , config = require('./config.yml')
-  , safeResolve = require('./lib/deardesi-utils').safeResolve
-  , path = require('path')
-  , blogdir = path.resolve(config.blogdir || __dirname)
-  , sha1sum = function (str) { return require('secret-utils').hashsum('sha1', str); }
-  , fs = PromiseA.promisifyAll(require('fs'))
+  , config      = require('./config.yml')
+  , path        = require('path')
+  , blogdir     = path.resolve(config.blogdir || __dirname)
   ;
 
 
@@ -33,54 +30,57 @@ app
         return;
       }
 
-      var filepaths = req.query.path && [req.query.path] || req.body.paths
-        , files = []
+      var filepaths = req.query.path && [req.query.path] || (req.query.paths && req.query.paths.split(/,/g)) || req.body.paths
         ;
 
       if (!filepaths || !filepaths.length) {
-        res.json({ error: "please specify req.query.path or req.body.paths" });
+        res.json({ error: "please specify GET w/ req.query.path or POST _method=GET&paths=path/to/thing,..." });
         return;
       }
 
-      return forEachAsync(filepaths, function (filepath) {
-        var pathname = safeResolve(blogdir, filepath)
-          ;
-
-        return fs.lstatAsync(pathname).then(function (stat) {
-          return fs.readFileAsync(pathname, null).then(function (buffer) {
-            files.push({
-              path: filepath
-            , size: buffer.byteLength
-            , lastModifiedDate: stat.mtime.toISOString()
-            , contents: buffer.toString('utf8')
-            , sha1: sha1sum(buffer)
-            , 
-            });
-          });
-        }).catch(function (e) {
-          files.push({ path: filepath, error: e.message });
-        });
-      }).then(function () {
-        res.send(files);
+      return getfs(blogdir, filepaths).then(function (files) {
+        if (!req.body.paths && !req.query.paths) {
+          res.json(files[0]);
+        } else {
+          res.send(files);
+        }
       });
     })
 
   .use('/api/fs/walk', function (req, res, next) {
+      var opts = {}
+        ;
+
       if (!(/^GET$/i.test(req.method) || /^GET$/i.test(req.query._method))) {
         next();
         return;
       }
 
-      var dirnames = req.query.dir && [req.query.dir] || req.body.dirs
+      var dirnames = req.query.dir && [req.query.dir] || (req.query.dirs && req.query.dirs.split(/,/g)) || req.body.dirs
         ;
 
       if (!dirnames || !dirnames.length) {
-        res.json({ error: "please specify req.query.dir or req.body.dirs" });
+        res.json({ error: "please specify GET w/ req.query.dir or POST w/ _method=GET&dirs=path/to/thing,..." });
         return;
       }
 
-      walk.walkDirs(blogdir, dirnames, { contents: false }).then(function (stats) {
-        if (!req.body.dirs) {
+      /*
+      if (req.query.excludes) {
+        opts.excludes = req.query.excludes.split(',');
+      }
+      */
+
+      if (req.query.extensions) {
+        opts.extensions = req.query.extensions.split(/,/g);
+      }
+
+      if ('true' === req.query.dotfiles) {
+        opts.dotfiles = true;
+      }
+
+      // TODO opts.contents?
+      walk.walkDirs(blogdir, dirnames, opts).then(function (stats) {
+        if (!req.body.dirs && !req.query.dirs) {
           res.json(stats[dirnames[0]]);
         } else {
           res.json(stats);
@@ -92,11 +92,13 @@ app
       next();
       return;
     })
+  .use('/api/fs/static', serveStatic('.'))
+
   .use(serveStatic('.'))
   ;
 
 module.exports = app;
 
-require('http').createServer(app).listen(8080, function () {
-  console.log('listening 8080');
+require('http').createServer().on('request', app).listen(80, function () {
+  console.log('listening 80');
 });
