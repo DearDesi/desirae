@@ -9,7 +9,7 @@
     , marked        = exports.marked        || require('marked')
     , forEachAsync  = exports.forEachAsync  || require('foreachasync').forEachAsync
     , sha1sum       = exports.sha1sum       || require('./lib/deardesi-node').sha1sum
-    , frontmatter   = exports.frontmatter   || require('./lib/frontmatter').Frontmatter
+    , frontmatter   = exports.Frontmatter   || require('./lib/frontmatter').Frontmatter
     , safeResolve   = exports.safeResolve   || require('./lib/deardesi-utils').safeResolve
     , getStats      = exports.getStats      || require('./lib/deardesi-node').getStats
     , getContents   = exports.getContents   || require('./lib/deardesi-node').getContents
