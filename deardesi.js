@@ -11,206 +11,262 @@
     , sha1sum       = exports.sha1sum       || require('./lib/deardesi-node').sha1sum
     , frontmatter   = exports.Frontmatter   || require('./lib/frontmatter').Frontmatter
     , safeResolve   = exports.safeResolve   || require('./lib/deardesi-utils').safeResolve
-    , getStats      = exports.getStats      || require('./lib/deardesi-node').getStats
-    , getContents   = exports.getContents   || require('./lib/deardesi-node').getContents
+    , fsapi         = exports.fsapi         || require('./lib/deardesi-node').fsapi
     ;
 
-  function getCollections(blogbase, ignorable, collectionnames) {
-    var collectiondir
-      , collectiondirs = []
-      , lost = []
-      , found = []
-      , errors = []
+  function runDesi(desi) {
+    var config = desi.config
+      , cache = desi.cache
+      , cacheByPath = {}
+      , cacheBySha1 = {}
+      , dfiles
+      , dthemes
       ;
 
-
-    collectionnames.forEach(function (collectionname) {
-      collectiondir = safeResolve(_dirname, collectionname);
-
-      if (!collectiondir) {
-        return PromiseA.reject(new Error("Please update your config.yml: " + collectionname + " is outside of '" + _dirname + "'"));
-      }
-
-      collectiondirs.push({ name: collectionname, path: collectiondir });
+    cache.sources = cache.sources || [];
+    cache.sources.forEach(function (source) {
+      cacheByPath[source.path] = source;
+      cacheBySha1[source.sha1] = source;
     });
 
-
-    return getFolders(collectiondirs, { recursive: true, limit: 5, stats: true }).then(function (stats) {
-      collectiondirs.forEach(function (collection) {
-        if (!stats[collection.path]) {
-          errors.push({
-            collection: collection
-          , message: "server did not return success or error for " + collection.path + ':\n' + JSON.stringify(stats)
-          });
-        }
-        else if (!stats[collection.path].type) {
-          lost.push(collection);
-        }
-        else if ('directory' !== stats[collection.path].type) {
-          errors.push({
-            collection: collection
-          , message: collection.path + " is not a directory (might be a symbolic link)"
-          });
-        } else {
-          found.push(collection);
-        }
-      });
-
-      return {
-        lost: lost
-      , found: found
-      , errors: errors
-      };
-    });
-  }
-
-  function showCollectionNotes(notes) {
-    if (notes.lost.length) {
-      console.warn("WARNING: these collections you specified couldn't be found");
-      notes.lost.forEach(function (node) {
-        console.warn('? ' + node.name);
-      });
-      console.log('');
-    }
-
-    if (notes.found.length) {
-      console.log("Will compile these collections");
-      notes.found.forEach(function (node) {
-        console.log('+ ' + node.name);
-      });
-      console.log('');
-    }
-  }
-
-  function getLayouts() {
-    // TODO
-  }
-
-  function updatePage(pagedir, node, lstat, data) {
-    var parts = frontmatter.parse(data)
-      , meta
-      , html
-      , view
-      ;
-
-    if (!parts.yml) {
-      console.error("Could not parse frontmatter for " + node);
-      console.error(parts.frontmatter);
-      return;
-    }
-
-    if (/\.(html|htm)$/.test(node)) {
-      html = parts.body.trim();
-    } else if (/\.(md|markdown|mdown|mkdn|mkd|mdwn|mdtxt|mdtext)$/.test(node)) {
-      console.log('parsing markdown...');
-      html = marked(parts.body.trim());
-    } else {
-      console.error('unknown parser for ' + node);
-    }
-
-    meta = {
-      mtime: lstat.mtime
-    , ymlsum: sha1sum(parts.frontmatter.trim())
-    , textsum: sha1sum(parts.body.trim())
-    , htmlsum: sha1sum(html)
-    , filesum: sha1sum(data)
-    , filename: node
-    , filepath: pagedir
-    };
-
-    /*
-    // TODO
-    db.getCached(meta).error(function () {
-      // TODO rebuild and save
-    });
-    */
-
-    // TODO meta.layout
-    view = {
-      page: parts.yml
-    , content: html
-    };
-
-    console.log(node);
-    console.log(parts.frontmatter);
-    console.log(parts.yml); //Mustache.render(pagetpl, view));
-    //console.log(meta.mtime.valueOf(), meta.ymlsum, meta.textsum, node);
-
-    return meta;
-  }
-
-  function templatePosts() {
-    var pagetpl
-      , defaulttpl
-      ;
-
-    // TODO declare path to theme
-    pagetpl = frontmatter.parse(fs.readFileSync(path.join(config.theme, 'layouts', 'page.html'), 'utf8'));
-    defaulttpl = frontmatter.parse(fs.readFileSync(path.join(config.theme, 'layouts', 'default.html'), 'utf8'));
-
-
-  }
-
-  function getCollection() {
-  }
-
-  console.log('');
-  console.log('');
-  console.log('loading caches...');
-
-  getMetaCache().then(function (db) {
-    console.log('last update: ' + (db.lastUpdate && new Date(db.lastUpdate) || 'never'));
-
-    console.log('checking for local updates...');
-
-
-    // TODO get layouts here
-    return getCollections('.', Object.keys(config.collections)).then(function (notes) {
-      showCollectionNotes(notes);
-
-      return notes.found;
-    }).then(function (found) {
-      var metas = []
+    function getDirty(thingies, deps) {
+      var byDirty = {}
         ;
 
-      return forEachAsync(found, function (collection) {
-        begintime = Date.now();
-        console.log('begin', ((begintime - starttime) / 1000).toFixed(4));
+      Object.keys(thingies).forEach(function (key) {
+        var files = thingies[key]
+          , cached
+          , cdate
+          , fdate
+          ;
 
-        return fs.readdirAsync(collection.path).then(function (nodes) {
+        console.log('files', key);
+        console.log(files);
+        files.forEach(function (file) {
+          var pathname = path.join(file.relativePath + '/' + file.name)
+            ;
 
-          // TODO look for companion yml file aside html|md|jade
-          nodes = nodes.filter(function (node) {
-            // TODO have handlers accept or reject extensions in the order they are registered
-            if (!/\.(htm|html|md|markdown|mdown|mkdn|mkd|jade)$/.test(node)) {
-              console.warn("ignoring " + collection.name + '/' + node + " (unknown filetype processor)");
-              return false;
+
+          // TODO legitimately checkout layout dependencies
+          if (deps && Object.keys(deps).length) {
+            byDirty[pathname] = file;
+            return;
+          }
+
+          if (!cacheByPath[pathname]) {
+            if (cacheBySha1[file.sha1]) {
+              // TODO rename
             }
 
-            return true;
-          });
+            byDirty[pathname] = file;
+            return;
+          }
 
-          return forEachAsync(nodes, function (pagename) {
-            var pagepath = path.join(collection.path, pagename)
-              ;
+          cached = cacheByPath[pathname];
+          cached.visited = true;
 
-            // TODO: support walking deep
-            // TODO: test .html, .md, etc
-            return fs.lstatAsync(pagepath).then(function (lstat) {
-              // no funny business allowed
-              if (!lstat.isFile()) {
-                return;
-              }
+          if (cached.sha1 && file.sha1) {
+            if (file.sha1 && cached.sha1 !== file.sha1) {
+              byDirty[pathname] = file;
+              return;
+            }
 
-              return fs.readFileAsync(nodepath, 'utf8').then(function (data) {
-                updatePage(pagedir, node, lstat, data);
-              });
-            });
-          });
-        }).then(function () {
-          console.log('doneish', ((Date.now() - begintime) / 1000).toFixed(4));
+            cdate = cached.lastModifiedDate && new Date(cached.lastModifiedDate);
+            fdate = file.lastModifiedDate && new Date(file.lastModifiedDate);
+
+            if (!cdate || !fdate || cdate !== fdate) {
+              byDirty[pathname] = file;
+            }
+          }
+
+        });
+      });
+
+      return byDirty;
+    }
+
+    dthemes = getDirty(desi.meta.themes);
+    console.log('dthemes');
+    console.log(dthemes);
+
+    dfiles = getDirty(desi.meta.collections, dthemes);
+    console.log('dfiles');
+    console.log(dfiles);
+    
+    return fsapi.getContents(Object.keys(dthemes)).then(function (tContent) {
+      return fsapi.getContents(Object.keys(dfiles)).then(function (cContent) {
+        desi.content = { collections: cContent, themes: tContent };
+        return desi;
+      });
+    });
+  }
+
+  console.log('');
+  console.log('');
+  console.log('getting config...');
+  return fsapi.getConfig().then(function (config) {
+    console.log('loading caches...');
+    return fsapi.getCache().then(function (cache) {
+      console.log('cache');
+      console.log(cache);
+      console.log('last update: ' + (cache.lastUpdate && new Date(cache.lastUpdate) || 'never'));
+      var collectionnames = Object.keys(config.collections)
+        ;
+
+      return fsapi.getMeta(
+        collectionnames
+      , { dotfiles: false
+        , extensions: ['md', 'markdown', 'htm', 'html', 'jade']
+        }
+      ).then(function (collections) {
+        var themenames = Object.keys(config.themes).filter(function (k) { return 'default' !== k; })
+          ;
+
+        console.log('collections');
+        console.log(collections);
+        return fsapi.getMeta(
+          themenames
+        , { dotfiles: false 
+          , extensions: ['md', 'markdown', 'htm', 'html', 'jade', 'css', 'js', 'yml']
+          }
+        ).then(function (themes) {
+          console.log('themes');
+          console.log(themes);
+          return { config: config, cache: cache, meta: { collections: collections, themes: themes } };
         });
       });
     });
+  }).then(runDesi).then(function (desi) {
+    console.log('desi.content');
+    console.log(desi.content);
+
+    function readMeta(things) {
+      return forEachAsync(things, function (file) {
+        //console.log('file.contents');
+        //console.log(file.contents);
+        var parts = frontmatter.parse(file.contents)
+          ;
+
+        if (!file.sha1) {
+          // TODO sha1sum
+        }
+
+        file.yml = parts.yml;
+        file.frontmatter = parts.frontmatter;
+        file.body = parts.body;
+
+        if (!parts.yml) {
+          console.warn("No frontmatter for " + (file.path || (file.relativePath + '/' + file.name)));
+        }
+
+        return Promise.resolve();
+      });
+    }
+
+    return readMeta(desi.content.themes).then(function () {
+      return readMeta(desi.content.collections).then(function () {
+        return desi;
+      });
+    });
+  }).then(function (desi) {
+    function getLayout(themename, layout, arr) {
+      arr = arr || [];
+
+      var layoutdir = 'layouts'
+        , themepath
+        , file
+        ;
+
+      if (!themename) {
+        themename = desi.config.themes.default;
+      }
+      if (!layout) {
+        layout = 'post.html';
+      }
+
+
+      themepath = themename + '/' + layoutdir + '/' + layout;
+
+      desi.content.themes.some(function (theme) {
+        // TODO what if it isn't html?
+        if (theme.path === themepath || theme.path.match(themepath + '\\.html')) {
+          file = theme;
+          arr.push(theme);
+          return true;
+        }
+      });
+
+      if (!file) {
+        console.error("could not find " + themepath);
+        return;
+      }
+
+      // TODO handle possible circular dep condition page -> post -> page
+      console.info(file);
+      if (file.yml && file.yml.layout) {
+        return getLayout(themename, file.yml.layout, arr);
+      } else {
+        // return the chain page -> posts -> default -> twitter
+        return arr;
+      }
+    }
+
+    desi.content.collections.forEach(function (article) {
+      // TODO process tags and categories and such
+      console.log(article.yml.title);
+      //console.log(article.yml.theme);
+      //console.log(article.yml.layout);
+      console.log(article.yml.permalink);
+
+
+      var child = ''
+        , layers
+        ;
+
+
+      console.log(article.path || (article.relativePath + '/' + article.name));
+      //console.log(article.frontmatter);
+      console.log(article.yml);
+      layers = getLayout(article.yml.theme, article.yml.layout, [article]);
+      console.log('LAYERS');
+      console.log(layers);
+      layers.forEach(function (parent) {
+        // TODO meta.layout
+        var view
+          , body = (parent.body || parent.contents || '').trim()
+          , html
+          ;
+
+        parent.path = parent.path || article.relativePath + '/' + article.name;
+
+        if (/\.(html|htm)$/.test(parent.path)) {
+          console.log('thinks its html');
+          html = body;
+        } else if (/\.(md|markdown|mdown|mkdn|mkd|mdwn|mdtxt|mdtext)$/.test(parent.path)) {
+          console.log('parsing markdown...');
+          html = marked(body);
+        } else {
+          console.error('unknown parser for ' + (article.path));
+        }
+
+        view = {
+          page: article.yml // data for just *this* page
+        , content: child    // processed content for just *this* page
+        , data: {}          // data.yml
+        , collection: {}    // data for just *this* collection
+        , categories: []    // *all* categories in all collections
+        , tags: []          // *all* tags in all collections
+        };
+
+        child = Mustache.render(html, view);
+      });
+
+      console.log('child');
+      console.log(child);
+      //console.log(meta.mtime.valueOf(), meta.ymlsum, meta.textsum, node);
+    });
+  }).catch(function (e) {
+    console.error('The Badness is upon us...');
+    throw e;
   });
 }('undefined' !== typeof exports && exports || window));
