@@ -12,6 +12,7 @@ var connect     = require('connect')
   , app         = connect()
   , walk        = require('./lib/fsapi').walk
   , getfs       = require('./lib/fsapi').getfs
+  , putfs       = require('./lib/fsapi').putfs
 
   , config      = require('./config.yml')
   , path        = require('path')
@@ -23,40 +24,14 @@ app
   .use(send.json())
   .use(query())
   .use(bodyParser.json())
-
-  .use('/api/fs/files', function (req, res, next) {
-      if (!(/^GET$/i.test(req.method) || /^GET$/i.test(req.query._method))) {
-        next();
-        return;
-      }
-
-      var filepaths = req.query.path && [req.query.path] || (req.query.paths && req.query.paths.split(/,/g)) || req.body.paths
-        ;
-
-      if (!filepaths || !filepaths.length) {
-        res.json({ error: "please specify GET w/ req.query.path or POST _method=GET&paths=path/to/thing,..." });
-        return;
-      }
-
-      return getfs(blogdir, filepaths).then(function (files) {
-        if (!req.body.paths && !req.query.paths) {
-          res.json(files[0]);
-        } else {
-          res.send(files);
-        }
-      });
-    })
-
   .use('/api/fs/walk', function (req, res, next) {
-      var opts = {}
-        ;
-
       if (!(/^GET$/i.test(req.method) || /^GET$/i.test(req.query._method))) {
         next();
         return;
       }
 
-      var dirnames = req.query.dir && [req.query.dir] || (req.query.dirs && req.query.dirs.split(/,/g)) || req.body.dirs
+      var opts = {}
+        , dirnames = req.query.dir && [req.query.dir] || (req.query.dirs && req.query.dirs.split(/,/g)) || req.body.dirs
         ;
 
       if (!dirnames || !dirnames.length) {
@@ -87,6 +62,47 @@ app
         }
       });
     })
+  .use('/api/fs/files', function (req, res, next) {
+      if (!(/^GET$/i.test(req.method) || /^GET$/i.test(req.query._method))) {
+        next();
+        return;
+      }
+
+      var filepaths = req.query.path && [req.query.path] || (req.query.paths && req.query.paths.split(/,/g)) || req.body.paths
+        ;
+
+      if (!filepaths || !filepaths.length) {
+        res.json({ error: "please specify GET w/ req.query.path or POST _method=GET&paths=path/to/thing,..." });
+        return;
+      }
+
+      return getfs(blogdir, filepaths).then(function (files) {
+        if (!req.body.paths && !req.query.paths) {
+          res.json(files[0]);
+        } else {
+          res.send(files);
+        }
+      });
+    })
+  .use('/api/fs/files', function (req, res, next) {
+      if (!(/^POST|PUT$/i.test(req.method) || /^POST|PUT$/i.test(req.query._method))) {
+        next();
+        return;
+      }
+
+      var opts = {}
+        , files = req.body.files
+        ;
+
+      if (!files || !files.length) {
+        res.json({ error: "please specify POST w/ req.body.files" });
+        return;
+      }
+
+      return putfs(blogdir, files, opts).then(function (results) {
+        res.json(results);
+      });
+    })
 
   .use('/api/fs', function (req, res, next) {
       next();
@@ -94,6 +110,7 @@ app
     })
   .use('/api/fs/static', serveStatic('.'))
 
+  .use(serveStatic(blogdir))
   .use(serveStatic('.'))
   ;
 
