@@ -23,7 +23,16 @@ var connect     = require('connect')
 app
   .use(send.json())
   .use(query())
-  .use(bodyParser.json())
+  .use(function (req, res, next) {
+    console.log('before parse');
+    next();
+  })
+  .use(bodyParser.json({ limit: 10 * 1024 * 1024 })) // 10mb
+  .use(function (req, res, next) {
+    console.log('after parse');
+    next();
+  })
+  .use(require('compression')())
   .use('/api/fs/walk', function (req, res, next) {
       if (!(/^GET$/i.test(req.method) || /^GET$/i.test(req.query._method))) {
         next();
