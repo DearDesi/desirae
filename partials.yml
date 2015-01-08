@@ -1,0 +1,32 @@
+---
+pages_list: |
+  <li {{# active }}class="active"{{/ active }}
+    ><a href="{{{ path }}}" {{# active }}class="active"{{/ active }}>{{ title }}</a
+  ></li>
+
+# [{ 'year': year,
+#   'months' : [{ 'month' : month,
+#     'pages': [{}, {}, ..] }, ..] }, ..]
+posts_collate: |
+  {{# years }}
+    {{> posts_collate_year }}
+  {{/ years }}
+
+posts_collate_year: |
+  {{# months }}
+  <h2>{{ year }}</h2>
+    {{> posts_collate_month }}
+  {{/ months }}
+
+posts_collate_month: |
+  {{# pages }}
+  <h3>{{ month }}</h3>
+  <ul>
+    {{> posts_collate_pages }}
+  </ul>
+  {{/ pages }}
+
+posts_collate_pages: |
+  <li
+    ><span>date</span> » <a href="{{url}}">{{ title }}</a
+  ></li>
