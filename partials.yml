@@ -9,24 +9,50 @@ pages_list: |
 #     'pages': [{}, {}, ..] }, ..] }, ..]
 posts_collate: |
   {{# years }}
+    <h2>{{ year }}</h2>
     {{> posts_collate_year }}
   {{/ years }}
 
 posts_collate_year: |
   {{# months }}
-  <h2>{{ year }}</h2>
+    <h3>{{ month }}</h3>
     {{> posts_collate_month }}
   {{/ months }}
 
 posts_collate_month: |
-  {{# pages }}
-  <h3>{{ month }}</h3>
   <ul>
+  {{# pages }}
     {{> posts_collate_pages }}
-  </ul>
   {{/ pages }}
+  </ul>
 
 posts_collate_pages: |
-  <li
-    ><span>date</span> » <a href="{{url}}">{{ title }}</a
-  ></li>
+  <li><span>{{ year }}-{{ month }}-{{ day }}</span> » 
+    <a href="{{{url}}}"
+      >{{ title }}</a></li>
+
+google_prettify: |
+  <script src="http://cdnjs.cloudflare.com/ajax/libs/prettify/188.0.0/prettify.js"></script>
+  <script>
+    var pres = document.getElementsByTagName("pre");
+    for (var i=0; i < pres.length; ++i) {
+      pres[i].className = "prettyprint {{#linenums}}linenums{{/linenums}}";
+    }
+    prettyPrint();
+  </script>
+  <!-- end Google Prettify -->
+
+google_ads: |
+  <script type="text/javascript">
+
+    var _gaq = _gaq || [];
+    _gaq.push(['_setAccount', {{#id}}'{{.}}'{{/id}}]);
+    _gaq.push(['_trackPageview']);
+
+    (function() {
+      var ga = document.createElement('script'); ga.type = 'text/javascript'; ga.async = true;
+      ga.src = ('https:' == document.location.protocol ? 'https://ssl' : 'http://www') + '.google-analytics.com/ga.js';
+      var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(ga, s);
+    })();
+
+  </script>
