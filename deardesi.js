@@ -6,7 +6,7 @@
   var PromiseA      = exports.Promise       || require('bluebird').Promise
     , path          = exports.path          || require('path')
     , Mustache      = exports.Mustache      || require('mustache')
-    , marked        = exports.marked        || require('marked')
+    , marked        = (exports.markdownit   || require('markdown-it'))({ html: true, linkify: true })
     , forEachAsync  = exports.forEachAsync  || require('foreachasync').forEachAsync
     //, sha1sum       = exports.sha1sum       || require('./lib/deardesi-node').sha1sum
     , frontmatter   = exports.Frontmatter   || require('./lib/frontmatter').Frontmatter
@@ -422,26 +422,27 @@
     }
 
     function normalizeContentEntity(entity) {
-      // The root index is the one exception
-      if (/^\/?index$/.test(entity.yml.permalink)) {
-        console.info('found index', entity);
-        entity.yml.permalink = '';
-      }
-
-      entity.url            = desi.urls.url + path.join(desi.urls.base_path, entity.yml.permalink, 'index.html');
-      entity.cananical_url  = desi.urls.url + path.join(desi.urls.base_path, entity.yml.permalink, 'index.html');
-      entity.relative_url   = path.join(desi.urls.base_path, entity.yml.permalink, 'index.html');
+      entity.ext            = path.extname(entity.path);
+      entity.url            = desi.urls.url + path.join(desi.urls.base_path, entity.yml.permalink);
+      entity.canonical_url  = desi.urls.url + path.join(desi.urls.base_path, entity.yml.permalink);
+      entity.relative_url   = path.join(desi.urls.base_path, entity.yml.permalink);
       entity.published_at   = fromLocaleDate(entity.yml.date);
-      entity.year = entity.published_at.year;
-      entity.month = entity.published_at.month;
-      entity.day = entity.published_at.day;
-      entity.hour = entity.published_at.hour;
-      entity.twelve_hour = entity.published_at.twelve_hour;
-      entity.meridian = entity.published_at.meridian;
-      entity.minute = entity.published_at.minute;
-      entity.title = entity.yml.title;
+      entity.year           = entity.published_at.year;
+      entity.month          = entity.published_at.month;
+      entity.day            = entity.published_at.day;
+      entity.hour           = entity.published_at.hour;
+      entity.twelve_hour    = entity.published_at.twelve_hour;
+      entity.meridian       = entity.published_at.meridian;
+      entity.minute         = entity.published_at.minute;
+      entity.title          = entity.yml.title;
       // let's just agree that that's too far
       //entity.second = entity.published_at.second;
+
+      // The root index is the one exception
+      if (/^\/?index$/.test(entity.yml.permalink)) {
+        entity.yml.permalink = '';
+        console.info('found index', entity);
+      }
     }
 
     function byDate(a, b) {
@@ -547,11 +548,18 @@
     function compileScriptEntity(entity, i, arr) {
     }
     */
+    desi.assets = [];
     function compileThemeEntity(entity, i, arr) {
       console.log("compiling " + (i + 1) + "/" + arr.length + " " + (entity.path || entity.name));
       // TODO less / sass / etc
       compiled.push({ contents: entity.body || entity.contents, path: path.join(desi.config.compiled_path, 'themes', entity.path) });
+      if (/stylesheets.*\.css/.test(entity.path) && (!/google/.test(entity.path) || /obsid/.test(entity.path))) {
+        desi.assets.push(
+          '<link href="' + entity.path + '" type="text/css" rel="stylesheet" media="all">'
+        );
+      }
     }
+    console.log(desi.navigation);
     function compileContentEntity(entity, i, arr) {
       console.log("compiling " + (i + 1) + "/" + arr.length + " " + (entity.path || entity.name));
 
@@ -572,29 +580,44 @@
       , categories: []    // *all* categories in all collections
       , tags: []          // *all* tags in all collections
       , site: num2str(desi.site || {})
-      , url: entity.cananical_url
-      , canonical_url: entity.cananical_url 
+      , url: entity.canonical_url
+      , canonical_url: entity.canonical_url 
       , relative_url: entity.relative_url
       , urls: desi.urls
       , previous: arr[i - 1]
       , next: arr[i + 1]
       , posts: { collated: desi.collated }
+        // TODO concat theme, widget, and site assets
+      , assets: desi.assets.join('\n')
       };
+      //console.log('rel:', view.relative_url);
       view.site.author = desi.data.author;
-      view.site['navigation?to_pages'] = desi.navigation.slice(0);
+      view.site.navigation = JSON.parse(JSON.stringify(desi.navigation));
+      view.site.navigation.forEach(function (nav) {
+        
+        if (nav.href === view.relative_url) {
+          nav.active = true;
+        }
+      });
+      // backwards compat
+      view.site['navigation?to_pages'] = view.site.navigation;
 
-      layers.forEach(function (parent) {
+      layers.forEach(function (current) {
         // TODO meta.layout
-        var body = (parent.body || parent.contents || '').trim()
+        var body = (current.body || current.contents || '').trim()
           , html
           ;
 
-        parent.path = parent.path || entity.relativePath + '/' + entity.name;
+        current.path = current.path || entity.relativePath + '/' + entity.name;
 
-        if (/\.(html|htm)$/.test(parent.path)) {
+        if (/\.(html|htm)$/.test(current.path)) {
           html = body;
-        } else if (/\.(md|markdown|mdown|mkdn|mkd|mdwn|mdtxt|mdtext)$/.test(parent.path)) {
-          html = marked(body);
+        } else if (/\.(md|markdown|mdown|mkdn|mkd|mdwn|mdtxt|mdtext)$/.test(current.ext)) {
+          html = marked.render(body)
+            //.replace('&quot;', '"')
+            //.replace('&#39;', "'")
+            //.replace('&#x2F;', '/')
+            ;
         } else {
           console.error('unknown parser for ' + (entity.path));
         }
@@ -633,12 +656,13 @@
       });
     }
 
+    console.info('[first] compiling theme assets');
+    desi.content.themes.filter(function (f) { return !/\blayouts\b/.test(f.path); }).forEach(compileThemeEntity);
+
     console.info('compiling root pages');
     desi.content.root.forEach(compileContentEntity);
     console.info('compiling article pages');
     desi.content.collections.forEach(compileContentEntity);
-    console.info('compiling theme assets');
-    desi.content.themes.filter(function (f) { return !/\blayouts\b/.test(f.path); }).forEach(compileThemeEntity);
 
     desi.compiled = compiled;
     return desi;

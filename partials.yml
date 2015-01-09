@@ -1,8 +1,8 @@
 ---
-pages_list: |
-  <li {{# active }}class="active"{{/ active }}
-    ><a href="{{{ path }}}" {{# active }}class="active"{{/ active }}>{{ title }}</a
-  ></li>
+pages_list: >
+  <li{{# active }} class="active"{{/ active }}><a{{# active }} class="active"{{/ active }}
+  href="{{{ path }}}" 
+  >{{ title }}</a></li>
 
 # [{ 'year': year,
 #   'months' : [{ 'month' : month,

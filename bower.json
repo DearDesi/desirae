@@ -33,10 +33,10 @@
     "bluebird": "~2.5.2",
     "rsvp": "~3.0.16",
     "escape-string-regexp": "~1.0.2",
-    "marked": "~0.3.2",
     "js-yaml": "~3.2.5",
     "path": "~3.46.1",
     "forEachAsync": "~5.0.5",
-    "node-uuid": "~1.4.2"
+    "node-uuid": "~1.4.2",
+    "markdown-it": "~3.0.2"
   }
 }
