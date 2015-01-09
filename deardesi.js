@@ -280,8 +280,6 @@
   console.info('getting config, data, caches...');
 
   return PromiseA.all([fsapi.getConfig(), fsapi.getData(), fsapi.getCache(), fsapi.getPartials()]).then(function (arr) {
-    console.info('config');
-    console.log(arr[0]);
     var config = arr[0]
       , data = arr[1]
       , cache = arr[2]
@@ -402,7 +400,7 @@
 
       // TODO fix compiled_path + base_path
       assets.forEach(function (asset) {
-        console.log(asset);
+        console.log('preparing ' + asset + ' for copy');
         files[path.join(asset.relativePath, asset.name)] = path.join(desi.config.compiled_path, 'assets', asset.relativePath, asset.name);
       });
     });
@@ -498,7 +496,10 @@
         page.htmlpath = page.path.replace(/\.\w+$/, '.html');
         // TODO strip '_root' or whatever
         // strip .html, .md, .jade, etc
-        yml.permalink = page.htmlpath;
+        if (!/^\/?(index)?\/?index(\.html)?/.test(yml.htmlpath)) {
+          console.info('found index again');
+          yml.permalink = page.htmlpath;
+        }
         console.info('1', yml.permalink);
       }
 
@@ -546,7 +547,7 @@
       //entity.second = entity.published_at.second;
 
       // The root index is the one exception
-      if (/^\/?index(\.html?)?$/.test(entity.yml.permalink)) {
+      if (/^(index)?\/?index(\.html?)?$/.test(entity.yml.permalink)) {
         entity.yml.permalink = '';
         console.info('found index', entity);
       }
@@ -601,7 +602,6 @@
           ;
 
         if (!yearsArr[yindex]) {
-          console.log(f.year);
           yearsArr[yindex] = { year: f.year, months: [] };
         }
         set = yearsArr[yindex];
@@ -630,7 +630,6 @@
         return true;
       });
 
-      console.log(yearsArr);
       return { years: yearsArr };
     }
 
@@ -670,7 +669,7 @@
     desi.navigation.filter(function (n) {
       return n;
     });
-    console.log(desi.navigation);
+    //console.log(desi.navigation);
     function compileContentEntity(entity, i, arr) {
       console.log("compiling " + (i + 1) + "/" + arr.length + " " + (entity.path || entity.name));
 
@@ -749,15 +748,21 @@
         previous = Mustache.render(html, curview, desi.partials);
       });
 
-      console.log({ contents: previous });
-
       // NOTE: by now, all permalinks should be in the format /path/to/page.html or /path/to/page/index.html
-      compiled.push({ contents: previous, path: path.join(desi.config.compiled_path, entity.yml.permalink/*, 'index.html'*/) });
+      if (/^(index)?(\/?index.html)?$/.test(entity.yml.permalink)) {
+        console.info('found compiled index');
+        compiled.push({ contents: previous, path: path.join(desi.config.compiled_path, 'index.html') });
+      } else {
+        compiled.push({ contents: previous, path: path.join(desi.config.compiled_path, entity.yml.permalink) });
+      }
+
       entity.yml.redirects = entity.yml.redirects || [];
       if (/\/index.html$/.test(entity.yml.permalink)) {
         entity.yml.redirects.push(entity.yml.permalink.replace(/\/index.html$/, '.html'));
-      } else {
+      } else if (/\.html$/.test(entity.yml.permalink)) {
         entity.yml.redirects.push(entity.yml.permalink.replace(/\.html?$/, '/index.html'));
+      } else {
+        console.info('found index, ignoring redirect');
       }
       entity.yml.redirects.forEach(function (redirect) {
         var content
