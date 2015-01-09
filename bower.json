@@ -38,5 +38,8 @@
     "forEachAsync": "~5.0.5",
     "node-uuid": "~1.4.2",
     "markdown-it": "~3.0.2"
+  },
+  "resolutions": {
+    "bluebird": "~2.6.2"
   }
 }

@@ -38,6 +38,7 @@
     "connect-send-json": "^1.0.0",
     "escape-string-regexp": "^1.0.2",
     "foreachasync": "^5.0.5",
+    "fs.extra": "^1.2.1",
     "json2yaml": "^1.0.3",
     "markdown": "^0.5.0",
     "markdown-it": "^3.0.2",

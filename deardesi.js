@@ -31,6 +31,10 @@
   , 12: 'December'
   };
 
+  function firstCap(str) {
+    return str.replace(/^./, function ($1) { return $1.toUpperCase(); });
+  }
+
   function pad(str) {
     str = str.toString();
     if (str.length < 2) {
@@ -170,7 +174,8 @@
       themename = desi.config.themes.default;
     }
     if (!layout) {
-      layout = 'post.html';
+      // TODO make configurable
+      layout = 'posts.html';
     }
 
 
@@ -210,7 +215,7 @@
       ;
 
     desi.urls = desi.config.urls = {};
-    if (development) {
+    if (true || development) {
       desi.urls.base_path = desi.config.development.base_path;
       desi.urls.url = desi.config.development.url;
       desi.urls.development_url = desi.config.development.url;
@@ -229,11 +234,26 @@
     dthemes = getDirty(cacheByPath, cacheBySha1, desi.meta.themes);
     droot = getDirty(cacheByPath, cacheBySha1, [desi.meta.root], dthemes);
     dfiles = getDirty(cacheByPath, cacheBySha1, desi.meta.collections, dthemes);
+
+    /*
+    if (!droot.length) {
+      console.error("no root files to get");
+    }
+    if (!dfiles.length) {
+      console.error("no content files to get");
+    }
+    if (!dthemes.length) {
+      console.error("no theme files to get");
+    }
+    if (!droot || !dfiles || !droot) {
+      throw new Error("didn't read files");
+    }
+    */
     
     return PromiseA.all([
-      fsapi.getContents(Object.keys(droot))
-    , fsapi.getContents(Object.keys(dfiles))
-    , fsapi.getContents(Object.keys(dthemes))
+      Object.keys(droot).length ? fsapi.getContents(Object.keys(droot)) : PromiseA.resolve([])
+    , Object.keys(dfiles).length ? fsapi.getContents(Object.keys(dfiles)) : PromiseA.resolve([])
+    , Object.keys(dthemes).length ? fsapi.getContents(Object.keys(dthemes)) : PromiseA.resolve([])
     ]).then(function (arr) {
       // TODO XXX display errors in html
       function noErrors(o) {
@@ -260,6 +280,8 @@
   console.info('getting config, data, caches...');
 
   return PromiseA.all([fsapi.getConfig(), fsapi.getData(), fsapi.getCache(), fsapi.getPartials()]).then(function (arr) {
+    console.info('config');
+    console.log(arr[0]);
     var config = arr[0]
       , data = arr[1]
       , cache = arr[2]
@@ -268,10 +290,16 @@
       , themenames = Object.keys(config.themes)
           .filter(function (k) { return 'default' !== k; })
           //.map(function (n) { return path.join(n, 'layouts'); })
+      , assetnames = Object.keys(config.assets)
       ;
 
-    console.info('loaded config, data, caches.');
-    console.log(arr);
+    console.info('loaded config, data, caches, partials');
+    console.log({
+      config:   arr[0]
+    , data:     arr[1]
+    , cache:    arr[2]
+    , partials: arr[3]
+    });
     console.info('last update: ' + (cache.lastUpdate && new Date(cache.lastUpdate) || 'never'));
 
     // TODO make document configurability
@@ -295,7 +323,21 @@
         , extensions: ['md', 'markdown', 'htm', 'html', 'jade']
         }
       )
+    , fsapi.getMeta(
+        assetnames
+      , { dotfiles: false 
+        //, extensions: ['md', 'markdown', 'htm', 'html', 'jade', 'css', 'js', 'yml']
+        }
+      )
     ]).then(function (things) {
+      console.info('loaded theme meta, root meta, collection meta');
+      console.log({
+        theme:      things[0]
+      , root:       things[1]
+      , collection: things[2]
+      , asset:      things[3]
+      });
+
       function noErrors(map) {
         Object.keys(map).forEach(function (path) {
           map[path] = map[path].filter(function (m) {
@@ -316,10 +358,24 @@
         return map;
       }
 
-      var themes = noErrors(things[0])
-        , root = noErrors(things[1])[config.rootdir]
+      var themes      = noErrors(things[0])
+        , root        = noErrors(things[1])[config.rootdir]
         , collections = noErrors(things[2])
+        , assets      = noErrors(things[3])
         ;
+
+      if (!themes[Object.keys(themes)[0]].length) {
+        console.error('Missing THEMES!');
+        throw new Error('It seems that your themes directory is missing');
+      }
+
+      if (!root.length) {
+        console.error('Missing ROOT!');
+      }
+
+      if (!collections[Object.keys(collections)[0]].length) {
+        console.error('Missing Collections!');
+      }
 
       return {
         config: config
@@ -329,10 +385,43 @@
           themes: themes
         , collections: collections
         , root: root
+        , assets: assets
         }
       , partials: partials
       };
     });
+  }).then(runDesi).then(function (desi) {
+    var files = {}
+      ;
+
+    // copy assets -> easy!
+    // TODO check cache
+    Object.keys(desi.meta.assets).forEach(function (key) {
+      var assets = desi.meta.assets[key]
+        ;
+
+      // TODO fix compiled_path + base_path
+      assets.forEach(function (asset) {
+        console.log(asset);
+        files[path.join(asset.relativePath, asset.name)] = path.join(desi.config.compiled_path, 'assets', asset.relativePath, asset.name);
+      });
+    });
+
+    return Object.keys(files).length && fsapi.copy(files).then(function (copied) {
+      if (copied.error) {
+        console.error(copied.error);
+        throw new Error(copied.error);
+      }
+
+      if (copied.errors && copied.errors.length) {
+        console.error("Errors copying assets...");
+        copied.errors.forEach(function (err) {
+          console.error(err);
+        });
+      }
+
+      return desi;
+    }) || PromiseA.resolve(desi);
   }).then(runDesi).then(function (desi) {
     return readFrontmatter(desi.content.root.concat(desi.content.themes.concat(desi.content.collections))).then(function () {
       return desi;
@@ -343,26 +432,28 @@
 
     desi.content.root.forEach(function (page) {
       var name = path.basename(page.path, path.extname(page.path))
+        , nindex
         ;
 
       //if (-1 === desi.data.navigation.indexOf(name) && 'index' !== name)
-      if (-1 === desi.data.navigation.indexOf(name)) {
+      nindex = desi.data.navigation.indexOf(name);
+      if (-1 === nindex) {
         return;
       }
 
-      desi.navigation.push({
-        title: page.yml && page.yml.title || name.replace(/^./, function ($1) { return $1.toUpperCase(); })
-      , href: '/' + name
-      , path: '/' + name
+      desi.navigation[nindex] = {
+        title: page.yml && page.yml.title || firstCap(name)
+      , href: desi.urls.base_path + '/' + name
+      , path: desi.urls.base_path + '/' + name
       , name: name
       , active: false // placeholder
-      });
+      };
     });
-
 
     desi.content.root.forEach(function (page) {
       page.yml = page.yml || {};
-      page.yml.layout = page.yml.layout || 'default';
+      // TODO make default layout configurable
+      page.yml.layout = page.yml.layout || '_root';
 
       if (!page.relativePath) {
         page.relativePath = path.dirname(page.path);
@@ -371,6 +462,11 @@
 
       page.relativePath = page.relativePath.replace(desi.config.rootdir, '').replace(/^\//, '');
       page.path = path.join(page.relativePath, page.name);
+
+      // TODO make bare root routes configurable
+      page.yml.permalink = page.yml.permalink || page.path.replace(/\.\w+$/, '');
+
+      page.yml.title = page.yml.title || firstCap(page.name.replace(/\.\w+$/, ''));
     });
 
     desi.content.collections = desi.content.collections.filter(function (article) {
@@ -395,13 +491,24 @@
 
       // TODO read the config for this collection for how to create premalink
       if (!yml.permalink) {
+        if (page.name) {
+          page.htmlname = page.name.replace(/\.\w+$/, '.html');
+        }
         page.path = page.path || path.join(page.relativePath, page.name);
+        page.htmlpath = page.path.replace(/\.\w+$/, '.html');
         // TODO strip '_root' or whatever
         // strip .html, .md, .jade, etc
-        yml.permalink = path.join(desi.urls.base_path, path.basename(page.path, path.extname(page.path)));
+        yml.permalink = page.htmlpath;
+        console.info('1', yml.permalink);
       }
+
+      if (!/\.html?$/.test(yml.permalink)) {
+        console.info(page.yml.permalink);
+        yml.permalink = path.join(yml.permalink, 'index.html');
+      }
+
       //yml.permalinkBase = path.join(path.dirname(yml.permalink), path.basename(yml.permalink, path.extname(yml.permalink)));
-      yml.permalink = path.join(path.dirname(yml.permalink), path.basename(yml.permalink, path.extname(yml.permalink)));
+      //yml.permalink = path.join(path.dirname(yml.permalink), path.basename(yml.permalink, path.extname(yml.permalink)));
 
       if (!page.yml.uuid) {
         // TODO only do this if it's going to be saved
@@ -439,7 +546,7 @@
       //entity.second = entity.published_at.second;
 
       // The root index is the one exception
-      if (/^\/?index$/.test(entity.yml.permalink)) {
+      if (/^\/?index(\.html?)?$/.test(entity.yml.permalink)) {
         entity.yml.permalink = '';
         console.info('found index', entity);
       }
@@ -500,7 +607,7 @@
         set = yearsArr[yindex];
 
         if (!set.months[mindex]) {
-          set.months[mindex] = { month: f.month, pages: [] };
+          set.months[mindex] = { month: months[parseInt(f.month, 10)], pages: [] };
         }
         set = set.months[mindex];
 
@@ -554,16 +661,20 @@
       // TODO less / sass / etc
       compiled.push({ contents: entity.body || entity.contents, path: path.join(desi.config.compiled_path, 'themes', entity.path) });
       if (/stylesheets.*\.css/.test(entity.path) && (!/google/.test(entity.path) || /obsid/.test(entity.path))) {
+        // TODO XXX move to a partial
         desi.assets.push(
-          '<link href="' + entity.path + '" type="text/css" rel="stylesheet" media="all">'
+          '<link href="' + desi.urls.base_path + '/themes/' + entity.path + '" type="text/css" rel="stylesheet" media="all">'
         );
       }
     }
+    desi.navigation.filter(function (n) {
+      return n;
+    });
     console.log(desi.navigation);
     function compileContentEntity(entity, i, arr) {
       console.log("compiling " + (i + 1) + "/" + arr.length + " " + (entity.path || entity.name));
 
-      var child = ''
+      var previous = ''
         , layers
         , view
         ;
@@ -572,7 +683,6 @@
 
       view = {
         page: entity.yml // data for just *this* page
-      , content: child    // processed content for just *this* page
       //, data: desi.data   // data.yml
       // https://github.com/janl/mustache.js/issues/415
       , data: num2str(desi.data)
@@ -590,6 +700,7 @@
         // TODO concat theme, widget, and site assets
       , assets: desi.assets.join('\n')
       };
+
       //console.log('rel:', view.relative_url);
       view.site.author = desi.data.author;
       view.site.navigation = JSON.parse(JSON.stringify(desi.navigation));
@@ -601,14 +712,20 @@
       });
       // backwards compat
       view.site['navigation?to_pages'] = view.site.navigation;
+      view.site['navigation?to__root'] = view.site.navigation;
+      view.data.navigation = view.site.navigation;
+      view.data['navigation?to_pages'] = view.site.navigation;
+      view.data['navigation?to__root'] = view.site.navigation;
 
       layers.forEach(function (current) {
         // TODO meta.layout
         var body = (current.body || current.contents || '').trim()
           , html
+          , curview = {}
           ;
 
-        current.path = current.path || entity.relativePath + '/' + entity.name;
+        // TODO move to normalization
+        current.path = current.path || (entity.relativePath + '/' + entity.name);
 
         if (/\.(html|htm)$/.test(current.path)) {
           html = body;
@@ -622,29 +739,42 @@
           console.error('unknown parser for ' + (entity.path));
         }
 
-        view.content = child;
+        view.content = previous;
+        view.page.content = previous;
 
-        child = Mustache.render(html, view, desi.partials);
+        // to prevent perfect object equality (and potential template caching)
+        Object.keys(view).forEach(function (key) {
+          curview[key] = view[key];
+        });
+        previous = Mustache.render(html, curview, desi.partials);
       });
 
-      // TODO add html meta-refresh redirects
-      compiled.push({ contents: child, path: path.join(desi.config.compiled_path, entity.yml.permalink, 'index.html') });
+      console.log({ contents: previous });
+
+      // NOTE: by now, all permalinks should be in the format /path/to/page.html or /path/to/page/index.html
+      compiled.push({ contents: previous, path: path.join(desi.config.compiled_path, entity.yml.permalink/*, 'index.html'*/) });
       entity.yml.redirects = entity.yml.redirects || [];
-      if (entity.yml.permalink) {
-        entity.yml.redirects.push(entity.yml.permalink + '.html');
+      if (/\/index.html$/.test(entity.yml.permalink)) {
+        entity.yml.redirects.push(entity.yml.permalink.replace(/\/index.html$/, '.html'));
+      } else {
+        entity.yml.redirects.push(entity.yml.permalink.replace(/\.html?$/, '/index.html'));
       }
       entity.yml.redirects.forEach(function (redirect) {
-        child = 
+        var content
+          ;
+
+        // TODO move to partial
+        content = 
           '<html>'
             + '<head>'
               + '<title>Redirecting to ' + entity.yml.title + '</title>'
               + '<meta http-equiv="refresh" content="0;URL=\''
-                + desi.urls.url + path.join(entity.yml.permalink)
+                + desi.urls.url + path.join(desi.urls.base_path, entity.yml.permalink)
               + '\'" />'
             + '</head>'
             + '<body>'
               + '<p>This page has moved to a <a href="'
-                + desi.urls.url + path.join(entity.yml.permalink)
+                + desi.urls.url + path.join(desi.urls.base_path, entity.yml.permalink)
               +'">'
                 + entity.yml.title
               + '</a>.</p>'
@@ -652,7 +782,7 @@
         + '</html>'
         ;
 
-        compiled.push({ contents: child, path: path.join(desi.config.compiled_path, redirect) });
+        compiled.push({ contents: content, path: path.join(desi.config.compiled_path, redirect) });
       });
     }
 
@@ -680,9 +810,9 @@
 
     // because some servers / proxies are terrible at handling large uploads (>= 100k)
     // (vagrant? or express? one of the two is CRAZY slow)
-    console.info('saving compiled files');
+    console.info('saving compiled files', desi.compiled);
     while (compiled.length) {
-      batches.push(compiled.splice(0, 1));
+      batches.push(compiled.splice(0, 500));
     }
 
     now = Date.now();
@@ -716,6 +846,7 @@
   }).catch(function (e) {
     console.error('A great and uncatchable error has befallen the land. Read ye here for das detalles..');
     console.error(e.message);
+    console.error(e);
     throw e;
   });
 }('undefined' !== typeof exports && exports || window));

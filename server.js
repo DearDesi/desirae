@@ -10,6 +10,7 @@ var connect     = require('connect')
   , send        = require('connect-send-json')
 
   , app         = connect()
+  , fsapi       = require('./lib/fsapi')
   , walk        = require('./lib/fsapi').walk
   , getfs       = require('./lib/fsapi').getfs
   , putfs       = require('./lib/fsapi').putfs
@@ -23,15 +24,7 @@ var connect     = require('connect')
 app
   .use(send.json())
   .use(query())
-  .use(function (req, res, next) {
-    console.log('before parse');
-    next();
-  })
   .use(bodyParser.json({ limit: 10 * 1024 * 1024 })) // 10mb
-  .use(function (req, res, next) {
-    console.log('after parse');
-    next();
-  })
   .use(require('compression')())
   .use('/api/fs/walk', function (req, res, next) {
       if (!(/^GET$/i.test(req.method) || /^GET$/i.test(req.query._method))) {
@@ -112,6 +105,25 @@ app
         res.json(results);
       });
     })
+  .use('/api/fs/copy', function (req, res, next) {
+      if (!(/^POST|PUT$/i.test(req.method) || /^POST|PUT$/i.test(req.query._method))) {
+        next();
+        return;
+      }
+
+      var opts = {}
+        , files = req.body.files
+        ;
+
+      if ('object' !== typeof files || !Object.keys(files).length) {
+        res.json({ error: "please specify POST w/ req.body.files" });
+        return;
+      }
+
+      return fsapi.copyfs(blogdir, files, opts).then(function (results) {
+        res.json(results);
+      });
+    })
 
   .use('/api/fs', function (req, res, next) {
       next();
@@ -119,12 +131,12 @@ app
     })
   .use('/api/fs/static', serveStatic('.'))
 
-  .use(serveStatic(blogdir))
   .use(serveStatic('.'))
+  .use(serveStatic(blogdir))
   ;
 
 module.exports = app;
 
-require('http').createServer().on('request', app).listen(80, function () {
-  console.log('listening 80');
+require('http').createServer().on('request', app).listen(process.argv[2] || 65080, function () {
+  console.log('listening ' + (process.argv[2] || 65080));
 });
