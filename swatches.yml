@@ -1,0 +1,36 @@
+bootstrap_cdn: //maxcdn.bootstrapcdn.com/bootstrap/3.3.1/css/bootstrap.min.css
+bootswatches: 
+  - Cerulean
+  - Cosmo
+  - Cyborg
+  - Darkly
+  - Flatly
+  - Journal
+  - Lumen
+  - Paper
+  - Readable
+  - Sandstone
+  - Simplex
+  - Slate
+  - Spacelab
+  - Superhero
+  - United
+  - Yeti
+bootswatches_2:
+  - Amelia
+  - Cerulean
+  - Cosmo
+  - Cyborg
+  - Flatly
+  - Journal
+  - Readable
+  - Simplex
+  - Slate
+  - Spacelab
+  - Superhero
+  - United
+bootswatch_cdn: //maxcdn.bootstrapcdn.com/bootswatch/3.3.1/{{name}}/bootstrap.min.css
+fontawesome_cdn: //maxcdn.bootstrapcdn.com/font-awesome/4.2.0/css/font-awesome.min.css
+
+bootswatch_2_download: http://bootswatch.com/2/{{bootswatch}}/bootstrap.min.css
+bootstrap_2_cdn://maxcdn.bootstrapcdn.com/twitter-bootstrap/2.3.2/css/bootstrap-combined.min.css

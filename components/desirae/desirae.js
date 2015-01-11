@@ -1,9 +1,62 @@
 angular.module('myApp.services', []).
-    factory('MyService', function($http) {
-        var MyService = {};
-        $http.get('resources/data.json').success(function(response) {
-            MyService.data = response;
+  factory('Desirae', ['$q', function($q) {
+    var Desi = window.Desi || require('./deardesi').Desi
+      , desi = {}
+      , fsapi = window.fsapi
+      ;
+
+    return {
+      reset: function () {
+        desi = {};
+      }
+    , meta: function () {
+        var d = $q.defer()
+          ;
+
+        if (desi.meta) {
+          d.resolve(desi);
+          return d.promise;
+        }
+
+        Desi.init(desi).then(function () {
+          d.resolve(desi);
         });
-        return MyService;
-    }
+
+        return d.promise;
+      }
+    , build: function (env) {
+        var d = $q.defer()
+          ;
+
+        if (desi.built) {
+          d.resolve(desi);
+          return d.promise;
+        }
+
+        Desi.build(desi, env).then(function () {
+          d.resolve(desi);
+        });
+
+        return d.promise;
+      }
+    , write: function (env) {
+        var d = $q.defer()
+          ;
+
+        if (desi.written) {
+          d.resolve(desi);
+          return d.promise;
+        }
+
+        Desi.write(desi, env).then(function () {
+          d.resolve(desi);
+        });
+
+        return d.promise;
+      }
+    , putFiles: function (files) {
+        return $q.when(fsapi.putFiles(files));
+      }
+    };
+  }]
 );

@@ -4,8 +4,12 @@
 angular.module('myApp', [
   'ngRoute',
   'myApp.about',
+  'myApp.authors',
+  'myApp.site',
   'myApp.build',
-  'myApp.version'
+  'myApp.create',
+  'myApp.version',
+  'myApp.services'
 ]).
 config(['$routeProvider', function ($routeProvider) {
   $routeProvider.otherwise({redirectTo: '/about'});

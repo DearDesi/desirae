@@ -1,9 +1,11 @@
 Desirae
 =====
 
-In development.
+A blog platform built for Developers, but with normal people in mind.
 
-Blog Platform. A Ruhoh knock-off written in JavaScript for the Browser
+Desirae runs entirely in the browser, but needs a little help from Node.js for saving and retrieving files.
+
+She can also be run from entirely headless from node.js.
 
 Key Features
 ------------
@@ -17,6 +19,51 @@ Browser (optional) - using your front-end templates to build in your front-end? 
 Node (optional) - if you'd prefer to go headless, you can.
 
 The server is *very* minimal and could easily be implemented in any language (such as ruby or python).
+
+Install and Usage
+=================
+
+If you're on OS X or Linux, it's as easy as pie to install and use Desirae.
+
+```bash
+git clone git@github.com:DearDesi/desirae.git
+pushd desirae
+
+# Downloads and installs node.js and a few other tools Desirae needs
+bash setup.sh ./blog
+```
+
+After the initial installation you can launch Dear Desi, the Web-based configuration and build tool like so:
+
+```
+deardesi ./blog 65080
+```
+
+Or, if you prefer, you can build with `desirae` from the command line:
+
+```
+desirae build ./blog
+
+desirae build-dev ./blog
+```
+
+Create a new Post
+-----------------
+
+```
+desirae post "My First Post"
+```
+
+Configuration
+=============
+
+There are a few configuration files:
+
+* `site.yml` is stuff that might be unique to your site, such as (title, url, adwords id, etc)
+* `authors/<<your-handle.yml>>` contains information about you (name, handle, facebook, etc)
+* `desirae.yml` contains directives that describe *how* the blog should be compiled - more technical stuff.
+
+If any of these files change, the entire site needs to be retemplated.
 
 Widgets
 =======

@@ -38,8 +38,10 @@
 
       <div id="navbar-main" ng-class="!navCollapsed &amp;&amp; 'in'" class="navbar-collapse collapse">
         <ul style="padding-top: 9px;" class="nav navbar-nav">
-          <li><a href="#/build">Configure</a></li>
-          <li><a href="#/post">Create Post</a></li>
+          <li><a href="#/authors">Authors</a></li>
+          <li><a href="#/site">Site</a></li>
+          <li><a href="#/build">Build</a></li>
+          <li><a href="#/create">Create Post</a></li>
         </ul>
       </div>
     </div>
@@ -102,9 +104,14 @@
   <!-- UX Using Angular, but not getting fancy -->
   <script src="./bower_components/angular/angular.js"></script>
   <script src="./bower_components/angular-route/angular-route.js"></script>
+  <script src="./bower_components/md5/build/md5.min.js"></script>
   <script src="./app.js"></script>
-  <script src="./views/build/build.js"></script>
   <script src="./views/about/about.js"></script>
+  <script src="./views/authors/authors.js"></script>
+  <script src="./views/site/site.js"></script>
+  <script src="./views/build/build.js"></script>
+  <script src="./views/create/create.js"></script>
+  <script src="components/desirae/desirae.js"></script>
   <script src="components/version/version.js"></script>
   <script src="components/version/version-directive.js"></script>
   <script src="components/version/interpolate-filter.js"></script>

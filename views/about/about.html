@@ -1,45 +1,47 @@
-<div ui-view="content" autocroll="false">
-  <div style="margin-bottom: 0;" class="jumbotron">
-    <div class="row">
-      <div class="container">
+<div class="container">
+  <div class="row">
+    <div class="col-xs-12">
+
+      <div class="page-header">
+        <h1>Welcome to Dear Desi! <small ng-bind="'(v%VERSION%)' | interpolate"></small></h1>
+      </div>
+
+      <div class="jumbotron">
         <div class="row">
-          <div class="col-xs-12">
-            <p>Dear Desi, ...</p><br/>
+          <div class="col-lg-7">
+            <p>Setup your new blog in just 5 minutes.</p>
+          </div>
+          <div class="col-lg-5">
           </div>
         </div>
-
-        <div style="text-align: center;" class="col-md-6"><img ng-src="http://dropsha.re/files/fly6+.8/desi-parker-2.jpg" style="border: 5px solid white; width: 260px; height: 260px;" class="img-circle"/>
-          <h1>Desirae</h1>
-          <h3>The in-browser static blog generator
-            <small ng-bind="'(v%VERSION%)' | interpolate"></small>
-          </h3>
-        </div>
-        <div style="text-align: left;" class="col-md-6">
-          <div>
-                <legend>
-                  <h2><span>Features</span></h2>
-                </legend>
-
-                <div class="row">
-                  <div class="col-lg-12">
-                    <ul>
-                      <li>Builds in the Browser
-                        <ul>
-                          <li>Write content in Markdown, Jade, or HTML</li>
-                          <li>Mustache Templates</li>
-                        </ul>
-                      </li>
-                      <li>Git, Dropbox, or regular Folders for management</li>
-                      <li>Go headless with Node.js support</li>
-                      <li>Dual Licensed Apache2 and MIT</li>
-                      <li>No Ruby version Hell - it'll still work in 6 months! :-D</li>
-                    </ul>
-                  </div>
-                </div>
+        <div class="row">
+          <div class="col-lg-7">
+            <br/>
+            <iframe width="560" height="315" src="//www.youtube.com/embed/YZzhIIJmlE0" frameborder="0" allowfullscreen></iframe>
+            <br/>
+          </div>
+          <div class="col-lg-5">
+            <h2>Dear Desi is...</h2>
+            <br/>
+            <ul>
+              <li>Builds in the Browser
+                <ul>
+                  <li>The in-browser static blog generator</li>
+                  <li>Write content in Markdown, Jade, or HTML</li>
+                  <li>Mustache Templates</li>
+                </ul>
+              </li>
+              <li>Git, Dropbox, or regular Folders for management</li>
+              <li>Go headless with Node.js support</li>
+              <li>Dual Licensed Apache2 and MIT</li>
+              <li>No Ruby version Hell - it'll still work in 6 months! :-D</li>
+            </ul>
+            <h3>What are you waiting for?</h3>
+            <br/>
+            <a class="btn btn-primary btn-lg pull-right" href="/#authors">Get Started</a>
           </div>
         </div>
       </div>
     </div>
   </div>
-
 </div>

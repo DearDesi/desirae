@@ -1,0 +1,233 @@
+<div class="container">
+  <div class="row">
+    <div class="page-header">
+      <div class="col-md-5 col-sm-6 col-xs-8">
+        <h1>Primary Author</h1>
+
+        <div class="row" ng-if="Authors.authors">
+          <div class="col-md-offset-1 col-md-8">
+            <div class="form-group">
+              <select 
+                ng-options="author as author.filename for (handle, author) in Authors.authors"
+                class="form-control"
+                ng-model="Authors.selectedAuthor"
+                ng-change="Authors.selectAuthor()"
+                ></select> 
+            </div>
+          </div>
+          <br/>
+        </div>
+
+      </div>
+      <div class="col-md-5 col-sm-6 col-xs-4">
+        <br/>
+        <img style="height:75px;" ng-src="{{Authors.headshot}}" />
+      </div>
+    </div>
+  </div>
+
+  <form class="form-horizontal" name="newAuthors" ng-submit="Authors.upsert(Authors.selectedAuthor)">
+    <div class="row">
+      <div class="col-sm-8">
+        <small><span ng-bind="Authors.blogdir"
+          ></span>/authors/<span ng-bind="Authors.selectedAuthor.handle"
+          ></span><span ng-if="Authors.selectedAuthor.handle"
+          >.yml</span></small>
+      </div>
+      <div class="col-sm-4">
+        <button class="btn btn-success pull-right" type="submit" ng-disabled="Authors.dirty || !Authors.selectedAuthor.handle">Save &amp; Continue</button>
+      </div>
+    </div>
+    <div class="row">
+        <br/>
+    </div>
+    <div class="row">
+      <div class="col-lg-12">
+        <div class="well bs-component">
+          <fieldset>
+            <legend>Profile Basics</legend>
+
+          <div class="row">
+          <div class="col-md-6">
+            <div class="form-group">
+              <label for="inputAuthorName" class="col-lg-4 control-label">Name*</label>
+              <div class="col-lg-8">
+                <input ng-model="Authors.selectedAuthor.name"
+                  required="required"
+                  type="text"
+                  class="form-control"
+                  id="inputAuthorName"
+                  name="inputAuthorName"
+                  placeholder="i.e. John Doe">
+              </div>
+            </div>
+          </div>
+
+          <div class="col-md-6">
+            <div class="form-group">
+              <label for="inputAuthorNickname" class="col-lg-4 control-label">Handle*</label>
+              <div class="col-lg-8">
+                <input ng-model="Authors.selectedAuthor.handle"
+                  required="required"
+                  type="text"
+                  class="form-control"
+                  id="inputAuthorNickname"
+                  name="inputAuthorNickname"
+                  placeholder="i.e. johndoe">
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="row">
+          <div class="col-md-6">
+            <div class="form-group">
+              <label for="inputAuthorEmail" class="col-lg-4 control-label">Email*</label>
+              <div class="col-lg-8">
+                <input ng-model="Authors.selectedAuthor.email" ng-change="Authors.updateHeadshotUrl()"
+                  required="required"
+                  type="email"
+                  class="form-control"
+                  id="inputAuthorEmail"
+                  name="inputAuthorEmail"
+                  placeholder="i.e. john.doe@gmail.com">
+              </div>
+            </div>
+          </div>
+
+          <div class="col-md-6">
+            <div class="form-group">
+              <label for="inputAuthorWebsite" class="col-lg-4 control-label">Website</label>
+              <div class="col-lg-8">
+                <input ng-model="Authors.selectedAuthor.website"
+                  type="url"
+                  class="form-control"
+                  id="inputAuthorWebsite"
+                  name="inputAuthorWebsite"
+                  placeholder="i.e. http://johndoe.name"
+                  >
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="row">
+          <div class="col-lg-12">
+            <div class="form-group">
+              <label for="inputAuthorBio" class="col-lg-2 control-label">Bio
+                <small>(<span ng-bind="Authors.selectedAuthor.bio.length || 0"></span>/140)</small></label>
+              <div class="col-lg-10">
+                <textarea ng-model="Authors.selectedAuthor.bio"
+                  class="form-control" id="inputAuthorBio" placeholder="i.e. Brogrammatic Ninja-throwing Rockstar Badassian Wizard JavaScript Superstar. 3+ years experience as a jalapeno poppers brony. YOLO."></textarea>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="row">
+          <div class="col-lg-12">
+            <div class="form-group">
+              <label for="inputAuthorHeadshot" class="col-lg-2 control-label">Headshot</label>
+              <div class="col-lg-10">
+                <input ng-model="Authors.selectedAuthor.headshot"  ng-change="Authors.updateHeadshotUrl()"
+                  type="text" class="form-control" id="inputAuthorHeadshot" placeholder="i.e. https://i.imgur.com/qqpxDmJ.jpg">
+              </div>
+            </div>
+          </div>
+        </div>
+
+
+          </fieldset>
+        </div>
+      </div>
+
+      <div class="col-lg-12">
+        <div class="well bs-component">
+          <fieldset>
+            <legend>Social</legend>
+
+            <div class="form-group">
+              <label for="inputAuthorTwitter" class="col-lg-2 control-label">Twitter</label>
+              <div class="col-lg-10">
+                <input ng-model="Authors.selectedAuthor.twitter"
+                  type="text" class="form-control" id="inputAuthorTwitter" placeholder="i.e. @johndoe">
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label for="inputAuthorFacebook" class="col-lg-2 control-label">Facebook URL</label>
+              <div class="col-lg-10">
+                <input ng-model="Authors.selectedAuthor.facebook"
+                  type="text" class="form-control" id="inputAuthorFacebook" placeholder="i.e. facebook.com/johndoe">
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label for="inputAuthorGooglePlus" class="col-lg-2 control-label">Google+ URL</label>
+              <div class="col-lg-10">
+                <input ng-model="Authors.selectedAuthor.googleplus"
+                  type="text" class="form-control" id="inputAuthorGooglePlus" placeholder="i.e. plus.google.com/+johndoe">
+              </div>
+            </div>
+          </fieldset>
+        </div>
+      </div>
+
+      <div class="col-lg-12">
+        <div class="well bs-component">
+          <fieldset>
+            <legend>Developers</legend>
+            <div class="form-group">
+              <label for="inputAuthorGithub" class="col-lg-2 control-label">Github</label>
+              <div class="col-lg-10">
+                <input ng-model="Authors.selectedAuthor.github"
+                  type="text" class="form-control" id="inputAuthorGithub" placeholder="i.e. johndoe">
+              </div>
+            </div>
+            <div class="form-group">
+              <label for="inputAuthorStackOverflow" class="col-lg-2 control-label">StackOverflow</label>
+              <div class="col-lg-10">
+                <input ng-model="Authors.selectedAuthor.stackoverflow"
+                  type="text" class="form-control" id="inputAuthorStackOverflow" placeholder="i.e. http://stackoverflow.com/users/151312/johndoe">
+              </div>
+            </div>
+
+         </fieldset>
+        </div>
+      </div>
+
+      <div class="col-lg-12">
+        <div class="well bs-component">
+          <fieldset>
+            <legend>Feeds</legend>
+
+            <div class="form-group">
+              <label for="inputAuthorFeedburner" class="col-lg-2 control-label">Feedburner</label>
+              <div class="col-lg-10">
+                <input ng-model="Authors.selectedAuthor.feedburner"
+                  type="text" class="form-control" id="inputAuthorFeedburner" placeholder="i.e. johndoe">
+              </div>
+            </div>
+
+          </fieldset>
+        </div>
+      </div>
+
+      <button class="btn btn-primary pull-right" type="submit">Save &amp; Continue</button>
+
+    </div>
+  </form>
+</div>
+
+<!--
+Instagram
+Etsy
+            <div class="form-group">
+              <label for="inputAuthorPinterest" class="col-lg-2 control-label">Pinterest</label>
+              <div class="col-lg-10">
+                <input ng-model="Authors.selectedAuthor.pinterest"
+                  type="text" class="form-control" id="inputAuthorPinterest" placeholder="i.e. @johndoe">
+              </div>
+            </div>
+
+-->

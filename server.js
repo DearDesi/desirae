@@ -15,9 +15,11 @@ var connect     = require('connect')
   , getfs       = require('./lib/fsapi').getfs
   , putfs       = require('./lib/fsapi').putfs
 
-  , config      = require('./config.yml')
+  , blogdir     = process.argv[2] || 'blog'
+  , port        = process.argv[3] || '65080'
+
   , path        = require('path')
-  , blogdir     = path.resolve(config.blogdir || __dirname)
+  //, config      = require(path.join('./', blogdir, 'config.yml'))
   ;
 
 
@@ -41,6 +43,13 @@ app
         return;
       }
 
+      if (!dirnames.every(function (dirname) {
+        return 'string' === typeof dirname;
+      })) {
+        res.json({ error: "malformed request: " + JSON.stringify(dirnames) });
+        return;
+      }
+
       /*
       if (req.query.excludes) {
         opts.excludes = req.query.excludes.split(',');
@@ -53,6 +62,12 @@ app
 
       if ('true' === req.query.dotfiles) {
         opts.dotfiles = true;
+      }
+      if ('false' === req.query.sha1sum) {
+        opts.sha1sum = false;
+      }
+      if ('true' === req.query.contents) {
+        opts.contents = true;
       }
 
       // TODO opts.contents?
@@ -125,18 +140,29 @@ app
       });
     })
 
-  .use('/api/fs', function (req, res, next) {
-      next();
+  .use('/api/fs', function (req, res) {
+      var pathname = path.resolve(blogdir)
+        ;
+
+      res.json({
+        path: pathname
+      , name: path.basename(pathname)
+      , relativePath: path.dirname(pathname)
+      //, cwd: path.resolve()
+      //, patharg: blogdir
+      });
       return;
     })
-  .use('/api/fs/static', serveStatic('.'))
+  .use('/api/fs/static', serveStatic(blogdir))
 
-  .use(serveStatic('.'))
-  .use(serveStatic(blogdir))
+  .use(serveStatic('./'))
+  .use('/compiled_dev', serveStatic(path.join(blogdir, '/compiled_dev')))
+  // TODO
+  //.use(serveStatic(tmpdir))
   ;
 
 module.exports = app;
 
-require('http').createServer().on('request', app).listen(process.argv[2] || 65080, function () {
-  console.log('listening ' + (process.argv[2] || 65080));
+require('http').createServer().on('request', app).listen(port, function () {
+  console.log('listening ' + port);
 });
