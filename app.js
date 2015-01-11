@@ -7,6 +7,7 @@ angular.module('myApp', [
   'myApp.authors',
   'myApp.site',
   'myApp.build',
+  'myApp.configure',
   'myApp.create',
   'myApp.version',
   'myApp.services'
