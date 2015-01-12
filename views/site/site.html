@@ -19,6 +19,7 @@
               <div class="col-lg-9">
                 <input 
                   ng-model="Site.site.title"
+                  required
                   type="text" class="form-control" id="inputBlogTitle" placeholder="My Awesome Blog">
               </div>
             </div>
@@ -39,7 +40,9 @@
                   <label for="inputSiteDesc" class="col-lg-3 control-label">Description
                     <small>(<span ng-bind="Site.site.description.length || 0"></span>/140)</small></label>
                   <div class="col-lg-9">
-                    <textarea ng-model="Site.site.description"
+                    <textarea
+                      ng-model="Site.site.description"
+                      required
                       class="form-control" id="inputSiteDesc" placeholder="i.e. For tips and tricks for try-hard ethical master cleanses, 3 wolf moons on Tumblr, disruptive lo-fi, preserving narwhals and eating kale chips, etc. YOLO."></textarea>
                   </div>
                 </div>
@@ -69,6 +72,7 @@
               <label for="inputProdHost" class="col-lg-3 control-label">Base URL</label>
               <div class="col-lg-9">
                 <input ng-model="Site.site.base_url"
+                  required
                   placeholder="i.e. https://example.com in https://example.com/myblog"
                   type="url"
                   class="form-control"
@@ -81,7 +85,8 @@
               <label for="inputProdBase" class="col-lg-3 control-label">Base Path</label>
               <div class="col-lg-9">
                 <input ng-model="Site.site.base_path"
-                  placeholder="i.e. /blog in https://example.com/blog"
+                  required
+                  placeholder="i.e. / for blog.test.com or /blog for test.com/blog"
                   type="text"
                   class="form-control"
                   id="inputProdBase">
@@ -92,7 +97,7 @@
               <label for="inputProdOutput" class="col-lg-3 control-label">Output Path</label>
               <div class="col-lg-9">
                 <input 
-                 ng-value="Site.blogdir + '/compiled'"
+                  ng-value="Site.blogdir + '/compiled'"
                   type="text" class="form-control" id="inputProdOutput" disabled>
               </div>
             </div>

@@ -8,7 +8,7 @@ angular.module('myApp', [
   'myApp.site',
   'myApp.build',
   'myApp.configure',
-  'myApp.create',
+  'myApp.post',
   'myApp.version',
   'myApp.services'
 ]).

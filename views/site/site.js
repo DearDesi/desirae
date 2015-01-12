@@ -9,7 +9,7 @@ angular.module('myApp.site', ['ngRoute'])
   });
 }])
 
-.controller('SiteCtrl', ['$scope', 'Desirae', function($scope, Desirae) {
+.controller('SiteCtrl', ['$scope', '$location', 'Desirae', function ($scope, $location, Desirae) {
   var scope = this
     ;
 
@@ -27,26 +27,18 @@ angular.module('myApp.site', ['ngRoute'])
   }
 
   scope.upsert = function () {
-    console.log('yolo!');
-    return;
-    var author = scope.selectedAuthor
-      , files = []
-      , filename = author.filename
+    var files = []
       ;
 
-    delete author.filename;
-    if ('new' !== filename && filename !== author.handle) {
-      files.push({ path: 'authors/' + filename + '.yml', contents: '', delete: true });
-    }
-    files.push({ path: 'authors/' + author.handle + '.yml', contents: window.jsyaml.dump(author) });
+    files.push({ path: 'site.yml', contents: scope.site });
 
     console.log(files);
-
     Desirae.putFiles(files).then(function (results) {
-      console.log('updated author', results);
+      console.log('TODO check for error');
+      console.log(results);
       $location.path('/post');
     }).catch(function (e) {
-      author.filename = filename;
+      console.error(scope.site);
       console.error(e);
       window.alert("Error Nation! :/");
       throw e;
