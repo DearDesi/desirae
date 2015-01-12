@@ -36,7 +36,7 @@ angular.module('myApp.post', ['ngRoute'])
         title: ""
       , description: ""
       , uuid: window.uuid.v4()
-      , date: "YYYY-MM-DD HH:MM pm" // TODO desirae
+      , date: Desirae.toDesiDate(new Date())// "YYYY-MM-DD HH:MM pm" // TODO desirae
       , permalink: "/article/new.md"
       , categories: []
       , tags: []
@@ -46,6 +46,7 @@ angular.module('myApp.post', ['ngRoute'])
       }
     }
   };
+  scope.selected.date = scope.selected.post.yml.date;
   scope.selected.post.frontmatter = window.jsyaml.dump(scope.selected.post.yml);
 
   scope.onChange = function () {
@@ -55,6 +56,9 @@ angular.module('myApp.post', ['ngRoute'])
       scope.selected.permalink = '/articles/' + scope.selected.title.toLowerCase()
         .replace(/["']/g, '')
         .replace(/\W/g, '-')
+        .replace(/^-/g, '')
+        .replace(/-$/g, '')
+        .replace(/--/g, '-')
         + '.' + scope.selected.format
         ;
       scope.selected.post.yml.permalink = scope.selected.permalink;
@@ -69,13 +73,13 @@ angular.module('myApp.post', ['ngRoute'])
 
   $timeout(function () {
     if (scope.selected && scope.selected.date === scope.selected.post.yml.date) {
-      scope.selected.date = scope.selected.post.yml.date = new Date().toISOString();
+      scope.selected.date = scope.selected.post.yml.date = Desirae.toDesiDate(new Date());
     }
     scope.onChange();
   }, 60 * 1000);
 
   scope.upsert = function () {
-    console.log(scope.selected.format)
+    console.log(scope.selected.format);
     var files = []
       ;
 

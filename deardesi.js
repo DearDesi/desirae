@@ -42,15 +42,6 @@
     return str;
   }
 
-  /*
-  function toLocaleDate(d) {
-    return d.getFullYear() + '-' + (d.getMonth() + 1) + '-' + d.getDate()
-      + ' '
-      + (d.getHours() % 12) + ':' + pad(d.getMinutes()) + ':' + pad(d.getSeconds())
-      ;
-  }
-  */
-
   function fromLocaleDate(str) {
     // handles ISO and ISO-ish dates
     var m = str.match(/(\d\d\d\d)-(\d{1,2})-(\d{1,2})([T\s](\d{1,2}):(\d{1,2})(:(\d{1,2}))?)?/)
@@ -214,6 +205,13 @@
 
   function Desi() {
   }
+
+  Desi.toLocaleDate = function (d) {
+    return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate())
+      + ' '
+      + (d.getHours() % 12) + ':' + pad(d.getMinutes()) + ' ' + (d.getHours() - 12 >= 0 ? 'pm' : 'am')
+      ;
+  };
 
   // read config and such
   Desi.init = function (desi) {

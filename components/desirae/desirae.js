@@ -9,6 +9,7 @@ angular.module('myApp.services', []).
       reset: function () {
         desi = {};
       }
+    , toDesiDate: Desi.toLocaleDate
     , meta: function () {
         var d = $q.defer()
           ;
