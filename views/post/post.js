@@ -19,37 +19,42 @@ angular.module('myApp.post', ['ngRoute'])
     Desirae.meta().then(function (desi) {
       scope.blogdir = desi.blogdir.path.replace(/^\/(Users|home)\/[^\/]+\//, '~/');
       scope.site = desi.site;
+      newPost();
+
       updateDate();
     }).catch(function (e) {
       window.alert("An Error Occured. Most errors that occur in the init phase are parse errors in the config files or permissions errors on files or directories, but check the error console for details.");
       console.error(e);
       throw e;
     });
+
+    scope.extensions = ['md', 'html'];
   }
 
-  scope.extensions = ['md', 'html'];
-
-  scope.selected = {
-    format: 'md'
-  , permalink: "/article/new.md"
-  , uuid: window.uuid.v4()
-  , post: { 
-      yml: {
-        title: ""
-      , permalink: "/article/new.md"
-      , date: Desirae.toDesiDate(new Date())// "YYYY-MM-DD HH:MM pm" // TODO desirae
-      , updated: null
-      , description: ""
-      , categories: []
-      , tags: []
-      , theme: null
-      , layout: null
-      , swatch: null
+  function newPost() {
+    scope.selected = {
+      format: 'md'
+    , permalink: "/article/new.md"
+    , uuid: window.uuid.v4()
+    , abspath: scope.blogdir
+    , post: { 
+        yml: {
+          title: ""
+        , permalink: "/article/new.md"
+        , date: Desirae.toDesiDate(new Date())// "YYYY-MM-DD HH:MM pm" // TODO desirae
+        , updated: null
+        , description: ""
+        , categories: []
+        , tags: []
+        , theme: null
+        , layout: null
+        , swatch: null
+        }
       }
-    }
-  };
-  scope.selected.date = scope.selected.post.yml.date;
-  scope.selected.post.frontmatter = window.jsyaml.dump(scope.selected.post.yml).trim();
+    };
+    scope.selected.date = scope.selected.post.yml.date;
+    scope.selected.post.frontmatter = window.jsyaml.dump(scope.selected.post.yml).trim();
+  }
 
   scope.onChange = function () {
     var post = scope.selected.post
@@ -79,6 +84,7 @@ angular.module('myApp.post', ['ngRoute'])
 
     // TODO use some sort of filepath pattern in config.yml
     selected.path = window.path.join((selected.collection || 'posts'), window.path.basename(post.yml.permalink));
+    selected.abspath = window.path.join(scope.blogdir, selected.path);
   };
   scope.onFrontmatterChange = function () {
     var data
