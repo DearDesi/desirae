@@ -11,11 +11,11 @@
         <div class="well bs-component">
           <fieldset>
             <div class="form-group">
-              <label for="inputPostTitle" class="col-lg-2 control-label">Title</label>
+              <label for="inputPostTitle" class="col-lg-2 control-label">Title*</label>
               <div class="col-lg-10">
                 <input
-                  required
-                  ng-model="Post.selected.title"
+                  required="required"
+                  ng-model="Post.selected.post.yml.title"
                   ng-change="Post.onChange()"
                   type="text"
                   class="form-control"
@@ -39,9 +39,10 @@
             </div>
             -->
             <div class="form-group">
-              <label for="textAreaPost" class="col-lg-2 control-label">Post</label>
+              <label for="textAreaPost" class="col-lg-2 control-label">Post*</label>
               <div class="col-lg-10">
                 <textarea
+                  required="required"
                   ng-model="Post.selected.post.body"
                   ng-change="Post.onChange()"
                   class="form-control"
@@ -54,9 +55,47 @@
             </div>
 
             <div class="form-group">
+              <label for="select" class="col-lg-2 control-label">Format*</label>
+              <div class="col-lg-10">
+                <select
+                  required="required"
+                  ng-model="Post.selected.format"
+                  ng-change="Post.onChange()"
+                  class="form-control"
+                  id="select">
+                  <option value="html">HTML</option>
+                  <option selected="selected" value="md">Markdown</option>
+                  <option disabled="disabled" value="jade">Jade (Not Implemented)</option>
+                </select>
+                <!--div class="checkbox">
+                  <label>
+                    <input type="checkbox"> Draft
+                  </label>
+                </div-->
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label for="textAreaDesc" class="col-lg-2 control-label">Description*
+                <small>(<span ng-bind="Post.selected.post.yml.description.length || 0"></span>/140)</small></label>
+              <div class="col-lg-10">
+                <textarea
+                  required="required"
+                  ng-change="Post.onChange()"
+                  ng-model="Post.selected.post.yml.description"
+                  placeholder="i.e. An alternate recipe for Peeta Mellarks's famous apple goat cheese tarts using only ingredients available in district 10"
+                  class="form-control"
+                  rows="2" 
+                  id="textAreaDesc"></textarea>
+                <span class="help-block">The description is often used by search engines as the snippit shown in search results.</span>
+              </div>
+            </div>
+
+            <div class="form-group">
               <label for="textAreaYaml" class="col-lg-2 control-label">Frontmatter</label>
               <div class="col-lg-10">
                 <textarea
+                  required="required"
                   ng-change="Post.onFrontmatterChange()"
                   ng-model="Post.selected.post.frontmatter"
                   class="form-control"
@@ -101,7 +140,7 @@
               <label for="inputPostPermalink" class="col-lg-2 control-label">Permalink</label>
               <div class="col-lg-10">
                 <input
-                  required
+                  required="required"
                   type="text"
                   class="form-control"
                   id="inputPostPermalink"
@@ -110,26 +149,6 @@
               </div>
             </div>
             -->
-
-            <div class="form-group">
-              <label for="select" class="col-lg-2 control-label">Format</label>
-              <div class="col-lg-10">
-                <select
-                  ng-model="Post.selected.format"
-                  ng-change="Post.onChange()"
-                  class="form-control"
-                  id="select">
-                  <option value="html">HTML</option>
-                  <option selected="selected" value="md">Markdown</option>
-                  <option disabled="disabled" value="jade">Jade (Not Implemented)</option>
-                </select>
-                <!--div class="checkbox">
-                  <label>
-                    <input type="checkbox"> Draft
-                  </label>
-                </div-->
-              </div>
-            </div>
 
             <div class="form-group">
               <div class="col-lg-10 col-lg-offset-2">

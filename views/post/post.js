@@ -19,6 +19,7 @@ angular.module('myApp.post', ['ngRoute'])
     Desirae.meta().then(function (desi) {
       scope.blogdir = desi.blogdir.path.replace(/^\/(Users|home)\/[^\/]+\//, '~/');
       scope.site = desi.site;
+      updateDate();
     }).catch(function (e) {
       window.alert("An Error Occured. Most errors that occur in the init phase are parse errors in the config files or permissions errors on files or directories, but check the error console for details.");
       console.error(e);
@@ -26,18 +27,19 @@ angular.module('myApp.post', ['ngRoute'])
     });
   }
 
+  scope.extensions = ['md', 'html'];
+
   scope.selected = {
-    title: ""
-  , format: 'md'
-  , description: ""
+    format: 'md'
   , permalink: "/article/new.md"
+  , uuid: window.uuid.v4()
   , post: { 
       yml: {
         title: ""
-      , description: ""
-      , uuid: window.uuid.v4()
-      , date: Desirae.toDesiDate(new Date())// "YYYY-MM-DD HH:MM pm" // TODO desirae
       , permalink: "/article/new.md"
+      , date: Desirae.toDesiDate(new Date())// "YYYY-MM-DD HH:MM pm" // TODO desirae
+      , updated: null
+      , description: ""
       , categories: []
       , tags: []
       , theme: null
@@ -47,50 +49,105 @@ angular.module('myApp.post', ['ngRoute'])
     }
   };
   scope.selected.date = scope.selected.post.yml.date;
-  scope.selected.post.frontmatter = window.jsyaml.dump(scope.selected.post.yml);
+  scope.selected.post.frontmatter = window.jsyaml.dump(scope.selected.post.yml).trim();
 
   scope.onChange = function () {
-    scope.selected.post.yml.title = scope.selected.title;
-    scope.selected.post.yml.description = scope.selected.description;
-    if (scope.selected.permalink === scope.selected.post.yml.permalink) {
-      scope.selected.permalink = '/articles/' + scope.selected.title.toLowerCase()
+    var post = scope.selected.post
+      , selected = scope.selected
+      ;
+
+    post.yml.title = post.yml.title || '';
+    post.yml.description = post.yml.description || '';
+
+    if (selected.permalink === post.yml.permalink) {
+      selected.permalink = '/articles/' + post.yml.title.toLowerCase()
         .replace(/["']/g, '')
         .replace(/\W/g, '-')
-        .replace(/^-/g, '')
-        .replace(/-$/g, '')
+        .replace(/^-+/g, '')
+        .replace(/-+$/g, '')
         .replace(/--/g, '-')
-        + '.' + scope.selected.format
+        + '.' + selected.format
         ;
-      scope.selected.post.yml.permalink = scope.selected.permalink;
+
+      post.yml.permalink = selected.permalink;
     }
-    scope.selected.post.frontmatter = window.jsyaml.dump(scope.selected.post.yml);
+    if (window.path.extname(post.yml.permalink) !== '.' + selected.format) {
+     post.yml.permalink = post.yml.permalink.replace(/\.\w+$/, '.' + selected.format);
+    }
+
+    post.frontmatter = window.jsyaml.dump(post.yml).trim();
+
+    // TODO use some sort of filepath pattern in config.yml
+    selected.path = window.path.join((selected.collection || 'posts'), window.path.basename(post.yml.permalink));
   };
   scope.onFrontmatterChange = function () {
-    scope.selected.post.yml = window.jsyaml.load(scope.selected.post.frontmatter);
-    scope.selected.title = scope.selected.post.yml.title;
-    scope.selected.description = scope.selected.post.yml.description;
+    var data
+      ;
+
+    try {
+      if (!scope.selected.post.frontmatter || !scope.selected.post.frontmatter.trim()) {
+        throw new Error('deleted frontmatter');
+      }
+      data = window.jsyaml.load(scope.selected.post.frontmatter);
+      scope.selected.format = data.permalink.replace(/.*\.(\w+$)/, '$1');
+      if (!data.permalink) {
+        data = scope.selected.permalink;
+      }
+      scope.selected.post.yml = data;
+    } catch(e) {
+      console.error(e);
+      console.error('ignoring update that created parse error');
+      scope.selected.post.frontmatter = window.jsyaml.dump(scope.selected.post.yml).trim();
+    }
   };
 
-  $timeout(function () {
-    if (scope.selected && scope.selected.date === scope.selected.post.yml.date) {
-      scope.selected.date = scope.selected.post.yml.date = Desirae.toDesiDate(new Date());
-    }
-    scope.onChange();
-  }, 60 * 1000);
+  function updateDate() {
+    $timeout.cancel(scope.dtlock);
+    scope.dtlock = $timeout(function () {
+      if (scope.selected && scope.selected.date === scope.selected.post.yml.date) {
+        scope.selected.date = scope.selected.post.yml.date = Desirae.toDesiDate(new Date());
+      }
+      scope.onChange();
+      updateDate();
+    }, 60 * 1000);
+  }
 
   scope.upsert = function () {
-    console.log(scope.selected.format);
+    console.log('upserted');
+    if (-1 === scope.extensions.indexOf(scope.selected.format)) {
+      window.alert('.' + scope.selected.format + ' is not a supported extension.\n\nPlease choose from: .' + scope.extensions.join(' .'));
+      return;
+    }
+
+    scope.selected.post.yml.uuid = scope.selected.uuid;
+    ['updated', 'theme', 'layout', 'swatch'].forEach(function (key) {
+      if (!scope.selected.post.yml[key]) {
+        delete scope.selected.post.yml[key];
+      }
+    });
+    scope.onChange();
+
     var files = []
       ;
 
-    files.push({ path: 'site.yml', contents: scope.site });
+    files.push({
+      path: scope.selected.path
+    , contents: 
+          '---\n'
+        + scope.selected.post.frontmatter.trim()
+        + '\n'
+        + '---\n'
+        + '\n'
+        + scope.selected.post.body.trim()
+    });
 
     console.log(files);
     Desirae.putFiles(files).then(function (results) {
       console.log('TODO check for error');
       console.log(results);
-      $location.path('/post');
+      $location.path('/build');
     }).catch(function (e) {
+      $timeout.cancel(scope.dtlock);
       console.error(scope.site);
       console.error(e);
       window.alert("Error Nation! :/");
