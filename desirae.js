@@ -230,10 +230,10 @@
   // read config and such
   Desi.init = function (desi) {
     // config.yml, data.yml, site.yml, authors
-    return PromiseA.all([fsapi.getBlogdir(), fsapi.getAllConfigFiles()]).then(function (plop) {
-      var blogdir = plop[0]
-        , arr = plop[1]
-        ;
+    return PromiseA.all([fsapi.getAllConfigFiles()/*, fsapi.getBlogdir()*/]).then(function (plop) {
+      var arr = plop[0]
+        //, blogdir = plop[1]
+        ; 
 
       console.info('loaded config, data, caches, partials');
       console.log({
@@ -242,7 +242,7 @@
       , authors:  arr.authors
       });
 
-      desi.blogdir = blogdir;
+      //desi.blogdir = blogdir;
       desi.originals = {};
       desi.copies = {};
 
@@ -1093,5 +1093,8 @@
     });
   };
 
+  if (!exports.window && !exports.window.Mustache) {
+    Desi.fsapi = require('./lib/fsapi');
+  }
   exports.Desi = Desi.Desi = Desi;
 }('undefined' !== typeof exports && exports || window));
