@@ -43,11 +43,11 @@ redirect: >
   <html>
     <head>
       <title>Redirecting to {{ entity.title }}</title>
-      <meta http-equiv="refresh" content="0;URL='{{{ env.url }}}{{{ entity.permalink }}}'"/>
+      <meta http-equiv="refresh" content="0;URL='{{{ entity.canonical_url }}}'"/>
     </head>
     <body>
       <p>This page has moved to
-        <a href="{{{ env.url }}}{{{ entity.permalink }}}">{{ entity.title }}</a>.
+        <a href="{{{ entity.canonical_url }}}">{{ entity.title }}</a>.
       </p>
     </body>
   </html>
