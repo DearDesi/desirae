@@ -705,8 +705,6 @@
       , tagline: view.entity.yml.tagline
       , content: view.contents
       , youtube: view.entity.yml.youtube
-      , disqus_identifier: view.entity.disqus_identifier
-      , disqus_url: !view.entity.disqus_identifier && view.entity.disqus_url
       , tags: view.entity.yml.tags
       , categories: view.entity.yml.categories
       , player_width: view.entity.yml.player_width
@@ -733,8 +731,8 @@
         comments: view.site.disqus_shortname &&
           Mustache.render(view.desi.partials.disqus, { disqus: {
             shortname: view.site.disqus_shortname
-          , identifier: view.entity.disqus_identifier
-          , url: !view.entity.disqus_identifier && view.entity.disqus_url
+          , identifier: view.entity.disqus_identifier || undefined
+          , url: !view.entity.disqus_identifier && view.entity.disqus_url || undefined
           }})
       , analytics: view.site.google_analytics_tracking_id && 
           Mustache.render(view.desi.partials.google_analytics, { google_analytics: {
