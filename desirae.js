@@ -849,17 +849,7 @@
         view.contents = mustached;
 
         // shallowClone to prevent perfect object equality (and potential template caching)
-        if (/Blog$/.test(view.entity.title)) {
-          console.log('desi.partials');
-          console.log(desi.partials);
-        }
         newview = datamap(view);
-        if (/Blog$/.test(view.entity.title)) {
-          console.info('desi.collated');
-          console.log(desi);
-          console.info('newview.posts.collated');
-          console.log(newview.posts.collated);
-        }
         mustached = Mustache.render(html, newview, desi.partials);
 
         return mustached;
@@ -890,7 +880,6 @@
       } else {
         view.entity.disqus_url = view.entity.production_url;
       }
-      console.log('entity', view.entity);
 
       return view;
     });
@@ -951,7 +940,6 @@
 
       desi.transforms.forEach(function (fn) {
         view = fn(view);
-        console.log('view.entity', view.entity);
       });
 
       return renderLayers(desi, env, view, entity).then(function (html) {
@@ -973,13 +961,14 @@
           console.info('found index, ignoring redirect');
         }
 
+        var redirectHtml = Mustache.render(desi.partials.redirect, view)
+          ;
+
         entity.yml.redirects.forEach(function (redirect) {
-          var html = Mustache.render(desi.partials.redirect, view)
-            ;
 
           compiled.push({
-            contents: html
-          , path: path.join(redirect)
+            contents: redirectHtml
+          , path: redirect
           });
         });
       }).catch(function (e) {
