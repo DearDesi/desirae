@@ -1,6 +1,8 @@
 Desirae
 =====
 
+(in development)
+
 A blog platform built for Developers, but with normal people in mind.
 
 Desirae runs entirely in the browser, but needs a little help from Node.js for saving and retrieving files.
@@ -20,39 +22,6 @@ Node (optional) - if you'd prefer to go headless, you can.
 
 The server is *very* minimal and could easily be implemented in any language (such as ruby or python).
 
-Install and Usage
-=================
-
-If you're on OS X or Linux, it's as easy as pie to install and use Desirae.
-
-```bash
-git clone git@github.com:DearDesi/desirae.git
-pushd desirae
-
-# Downloads and installs node.js and a few other tools Desirae needs
-bash setup.sh ./blog
-```
-
-After the initial installation you can launch Dear Desi, the Web-based configuration and build tool like so:
-
-```
-deardesi ./blog 65080
-```
-
-Or, if you prefer, you can build with `desirae` from the command line:
-
-```
-desirae build ./blog
-
-desirae build-dev ./blog
-```
-
-Create a new Post
------------------
-
-```
-desirae post "My First Post"
-```
 
 Configuration
 =============
@@ -64,58 +33,6 @@ There are a few configuration files:
 * `desirae.yml` contains directives that describe *how* the blog should be compiled - more technical stuff.
 
 If any of these files change, the entire site needs to be retemplated.
-
-Widgets
-=======
-
-All widgets should export an object with a `create(widgetConf, desiState)` function that returns a promise.
-
-```yaml
-widgets:
-  foogizmo:
-    # only stuff that is intensely specific to foogizmo goes here
-    # stuff like google ad and disqus ids should go in config.yml or data.yml
-    config:
-      foobeep: boop
-      
-    handle:
-      - html
-      - markdown
-    handlers:
-      post: fooposter
-      page: foopager
-```
-
-```javascript
-'use strict';
-
-module.exports.Foogizmo.create = function (foogizmoConf, desiState) {
-  return new Promise(function (resolve) {
-
-    function pager(desiPageState) {
-      // Do processing
-
-      return Promise.resolve();
-    }
-
-    function poster(desiPostState) {
-      // Do processing
-
-      desiPostState.fooembedinator = function (fooval) {
-        // figure out what type of link fooval is and return iframe html
-        return '<iframe src="http://embedinator.com/"' + foovalProcessed + '></iframe>'
-      }
-    }
-
-    resolve({ foopager: pager, fooposter: poster });
-  });
-}
-```
-
-Overlays
---------
-
-For any config a widget uses, it should also check on post.fooconfig and theme.fooconfig to make sure that they don't override the foogizmo.config.fooconfig
 
 
 Server
@@ -137,17 +54,20 @@ GET /api/fs/walk
 ```json
 [
   { "name": "happy-new-year.md"
+  , "createdDate": "2015-01-05T18:19:30.000Z"
   , "lastModifiedDate": "2015-01-05T18:19:30.000Z"
   , "size": 2121
   , "relativePath": "posts/2015"
   }
 
 , { "name": "tips-for-the-ages.jade"
+  , "createdDate": "2014-06-16T18:19:30.000Z"
   , "lastModifiedDate": "2014-06-16T18:19:30.000Z"
   , "size": 389
   , "relativePath": "posts"
   }
 , { "name": "my-first-post.html"
+  , "createdDate": "2013-08-01T22:47:37.000Z"
   , "lastModifiedDate": "2013-08-01T22:47:37.000Z"
   , "size": 4118
   , "relativePath": "posts/2013"
@@ -183,6 +103,7 @@ GET /api/fs/files
 
 ```json
 { "path": "posts/intro-to-http-with-netcat-node-connect.md"
+, "createdDate": "2013-08-01T22:47:37.000Z"
 , "lastModifiedDate": "2013-08-01T22:47:37.000Z"
 , "contents": "..."
 , "sha1": "6eae3a5b062c6d0d79f070c26e6d62486b40cb46"
@@ -236,6 +157,7 @@ POST http://local.dear.desi:8080/api/fs/files?compiled=true&_method=PUT
     { "path": "posts/foo.md"
     , "name": "foo.md"
     , "relativePath": "posts"
+    , "createdDate": "2013-08-01T22:47:37.000Z"
     , "lastModifiedDate": "2013-08-01T22:47:37.000Z"
     , "contents": "..."
     , "sha1": "6eae3a5b062c6d0d79f070c26e6d62486b40cb46"
@@ -259,10 +181,18 @@ The response may include errors of all shapes and sizes.
 }
 ```
 
-**TODO** Allow rename and delete?
+POST /api/fs/copy
+------------------
+
+```json
+{ files: { "assets/logo.png": "compiled/assets/logo.png" } }
+```
+
 
 TODO
 ----
+
+**TODO** Allow rename and delete?
 
 option for client write to a hidden `.desi-revisions` (as well as indexeddb)
 to safeguard against accidental blow-ups for people who aren't using git.
