@@ -717,7 +717,9 @@
     , posts: { collated: view.desi.collated }
     , urls: {
         base_url: view.env.base_url
-      , base_path: view.env.base_path
+        // /something -> good (leading slash)
+        // / -> bad (trailing slash)
+      , base_path: view.env.base_path.replace(/^\/$/, '')
       }
     , data: {
         author: {
@@ -895,7 +897,7 @@
       if (/stylesheets.*\.css/.test(entity.path) && (!/google/.test(entity.path) || /obsid/.test(entity.path))) {
         // TODO XXX move to a partial
         desi.assets.push(
-          '<link href="' + env.base_path + '/themes/' + entity.path + '" type="text/css" rel="stylesheet" media="all">'
+          '<link href="' + path.join(env.base_path, '/themes/', entity.path) + '" type="text/css" rel="stylesheet" media="all">'
         );
       }
     }
@@ -916,8 +918,8 @@
 
       // TODO nested names?
       navigation.forEach(function (nav) {
-        nav.href = env.base_path + '/' + nav.name;
-        nav.path = env.base_path + '/' + nav.name;
+        nav.href = path.join(env.base_path, nav.name);
+        nav.path = path.join(env.base_path, nav.name);
 
         // path.basename(nav.path, path.extname(nav.path))
         if (nav.href.replace(/(\/)?(\/index)?(\.html)?$/i, '') === entity.relative_url.replace(/(\/)?(\/index)?(\.html)?$/i, '')) {
