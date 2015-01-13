@@ -1,0 +1,137 @@
+---
+amazon_link_enhancer: |
+  <!-- amazon -->
+  <script async="true" type="text/javascript" src="http://wms.assoc-amazon.com/20070822/US/js/link-enhancer-common.js?tag={{ amazon_affiliate_id }}">
+  </script>
+  <noscript>
+    <img src="http://wms.assoc-amazon.com/20070822/US/img/noscript.gif?tag={{ amazon_affiliate_id }}" alt="" />
+  </noscript>
+
+google_analytics: |
+  <script type="text/javascript">
+
+    var _gaq = _gaq || [];
+    _gaq.push(['_setAccount', '{{ google_analytics.tracking_id }}']);
+    _gaq.push(['_trackPageview']);
+
+    (function() {
+      var ga = document.createElement('script'); ga.type = 'text/javascript'; ga.async = true;
+      ga.src = ('https:' == document.location.protocol ? 'https://ssl' : 'http://www') + '.google-analytics.com/ga.js';
+      var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(ga, s);
+    })();
+
+  </script>
+
+disqus: |
+  <div id="disqus_thread"></div>
+  <script type="text/javascript">
+      /* * * CONFIGURATION VARIABLES: EDIT BEFORE PASTING INTO YOUR WEBPAGE * * */
+      var disqus_shortname = '{{ disqus.shortname }}'; // required: replace example with your forum shortname
+      var disqus_identifier = '{{ disqus.identifier }}' || undefined;
+      var disqus_url = '{{{ disqus.url }}}' || undefined;
+
+      /* * * DON'T EDIT BELOW THIS LINE * * */
+      (function() {
+          var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;
+          dsq.src = '//' + disqus_shortname + '.disqus.com/embed.js';
+          (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+      })();
+  </script>
+  <noscript>Please enable JavaScript to view the <a href="https://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+    
+redirect: >
+  <html>
+    <head>
+      <title>Redirecting to {{ entity.title }}</title>
+      <meta http-equiv="refresh" content="0;URL='{{{ env.url }}}{{{ entity.permalink }}}'"/>
+    </head>
+    <body>
+      <p>This page has moved to
+        <a href="{{{ env.url }}}{{{ entity.permalink }}}">{{ entity.title }}</a>.
+      </p>
+    </body>
+  </html>
+
+pages_list: >
+  <li{{# active }} class="active"{{/ active }}><a{{# active }} class="active"{{/ active }}
+  href="{{{ path }}}" 
+  >{{ title }}</a></li>
+
+# [{ 'year': year,
+#   'months' : [{ 'month' : month,
+#     'pages': [{}, {}, ..] }, ..] }, ..]
+posts_collate: |
+  {{# years }}
+    <h2>{{ year }}</h2>
+    {{> posts_collate_year }}
+  {{/ years }}
+
+posts_collate_year: |
+  {{# months }}
+    <h3>{{ month }}</h3>
+    {{> posts_collate_month }}
+  {{/ months }}
+
+posts_collate_month: |
+  <ul>
+  {{# pages }}
+    {{> posts_collate_pages }}
+  {{/ pages }}
+  </ul>
+
+posts_collate_pages: |
+  <li><span>{{ year }}-{{ month }}-{{ day }}</span> » 
+    <a href="{{{url}}}"
+      >{{ title }}</a></li>
+
+google_prettify: |
+  <script src="http://cdnjs.cloudflare.com/ajax/libs/prettify/188.0.0/prettify.js"></script>
+  <script>
+    var pres = document.getElementsByTagName("pre");
+    for (var i=0; i < pres.length; ++i) {
+      pres[i].className = "prettyprint {{#linenums}}linenums{{/linenums}}";
+    }
+    prettyPrint();
+  </script>
+  <!-- end Google Prettify -->
+
+google_ads: |
+  <script type="text/javascript">
+
+    var _gaq = _gaq || [];
+    _gaq.push(['_setAccount', {{#id}}'{{.}}'{{/id}}]);
+    _gaq.push(['_trackPageview']);
+
+    (function() {
+      var ga = document.createElement('script'); ga.type = 'text/javascript'; ga.async = true;
+      ga.src = ('https:' == document.location.protocol ? 'https://ssl' : 'http://www') + '.google-analytics.com/ga.js';
+      var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(ga, s);
+    })();
+
+  </script>
+
+facebook_connect: |
+    <!-- facebook -->
+    <div id="fb-root"></div>
+    <script>(function(d, s, id) {
+      var js, fjs = d.getElementsByTagName(s)[0];
+      if (d.getElementById(id)) return;
+      js = d.createElement(s); js.id = id; js.async=true;
+      js.src = "//connect.facebook.net/en_US/all.js#xfbml=1&appId=213439508797174";
+      fjs.parentNode.insertBefore(js, fjs);
+    }(document, 'script', 'facebook-jssdk'));</script>
+
+google_plusone: |
+    <!-- g+ -->
+    <!-- Place this tag after the last +1 button tag. -->
+    <script type="text/javascript">
+      (function() {
+        var po = document.createElement('script'); po.type = 'text/javascript'; po.async = true;
+        po.src = 'https://apis.google.com/js/plusone.js';
+        var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(po, s);
+      })();
+    </script>
+
+twitter: |
+    <!-- twitter -->
+    <script>!function(d,s,id){var js,fjs=d.getElementsByTagName(s)[0];if(!d.getElementById(id)){js=d.createElement(s);js.id=id;js.async=true;js.src="//platform.twitter.com/widgets.js";fjs.parentNode.insertBefore(js,fjs);}}(document,"script","twitter-wjs");</script>

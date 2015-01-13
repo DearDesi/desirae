@@ -4,7 +4,6 @@
   var PromiseA      = exports.Promise       || require('bluebird').Promise
     , path          = exports.path          || require('path')
     , Mustache      = exports.Mustache      || require('mustache')
-    , marked        = (exports.markdownit   || require('markdown-it'))({ html: true, linkify: true })
     , forEachAsync  = exports.forEachAsync  || require('foreachasync').forEachAsync
     //, sha1sum       = exports.sha1sum       || require('./lib/deardesi-node').sha1sum
     , frontmatter   = exports.Frontmatter   || require('./lib/frontmatter').Frontmatter
@@ -28,6 +27,19 @@
   , 11: 'November'
   , 12: 'December'
   };
+
+  /*
+  function shallowClone(obj) {
+    var shallow = {}
+      ;
+
+    Object.keys(obj).forEach(function (key) {
+      shallow[key] = obj[key];
+    });
+
+    return shallow;
+  }
+  */
 
   function firstCap(str) {
     return str.replace(/^./, function ($1) { return $1.toUpperCase(); });
@@ -154,6 +166,7 @@
   }
 
   function getLayout(desi, themename, layout, arr) {
+    // TODO meta.layout for each entity
     arr = arr || [];
 
     var layoutdir = 'layouts'
@@ -176,6 +189,7 @@
       // TODO what if it isn't html?
       if (theme.path === themepath || theme.path.match(themepath + '\\.html')) {
         file = theme;
+        theme.ext = path.extname(file.path);
         arr.push(theme);
         return true;
       }
@@ -224,8 +238,8 @@
       console.info('loaded config, data, caches, partials');
       console.log({
         config:   arr.config
-      , data:     arr.data
       , site:     arr.site
+      , authors:  arr.authors
       });
 
       desi.blogdir = blogdir;
@@ -339,22 +353,7 @@
     });
   };
 
-  Desi.setEnv = function (desi, env) {
-    desi.urls = desi.config.urls = {};
-    desi.env = {};
-    if (-1 === ['development', 'staging'].indexOf(env) || !desi.config[env]) {
-      env = 'production';
-    }
-
-    desi.urls.base_path = desi.config.base_path = desi.config[env].base_path;
-    desi.urls.url = desi.config[env].url;
-    desi.config.compiled_path = desi.config[env].compiled_path;
-    desi.urls[env + '_url'] = desi.config[env].url;
-
-    return PromiseA.resolve(desi);
-  };
-
-  Desi.getDirtyFiles = function (desi, env) {
+  Desi.getDirtyFiles = function (desi) {
     var cache = desi.cache
       //, config = desi.config
       , cacheByPath = {}
@@ -363,10 +362,6 @@
       , dthemes
       , droot
       ;
-
-    if (!desi.env) {
-      Desi.setEnv(desi, env);
-    }
 
     cache.sources = cache.sources || [];
     cache.sources.forEach(function (source) {
@@ -419,7 +414,7 @@
     });
   };  
 
-  Desi.copyAssets = function(desi) {
+  Desi.copyAssets = function(desi, env) {
     var files = {}
       ;
 
@@ -429,10 +424,9 @@
       var assets = desi.meta.assets[key]
         ;
 
-      // TODO fix compiled_path + base_path
       assets.forEach(function (asset) {
-        console.log('preparing ' + asset + ' for copy');
-        files[path.join(asset.relativePath, asset.name)] = path.join(desi.config.compiled_path, 'assets', asset.relativePath, asset.name);
+        console.log('preparing ' + asset.path + ' for copy');
+        files[path.join(asset.relativePath, asset.name)] = path.join(env.compiled_path, 'assets', asset.relativePath, asset.name);
       });
     });
 
@@ -464,23 +458,27 @@
     desi.navigation = [];
 
     desi.content.root.forEach(function (page) {
+      // XXX BUG TODO strip only strip _root so that nested nav will work as expected
       var name = path.basename(page.path, path.extname(page.path))
         , nindex
         ;
 
       //if (-1 === desi.data.navigation.indexOf(name) && 'index' !== name)
-      nindex = desi.data.navigation.indexOf(name);
+      nindex = (desi.site.navigation).indexOf(name);
       if (-1 === nindex) {
         return;
       }
 
       desi.navigation[nindex] = {
         title: page.yml && page.yml.title || firstCap(name)
-      , href: desi.urls.base_path + '/' + name
-      , path: desi.urls.base_path + '/' + name
       , name: name
       , active: false // placeholder
       };
+    });
+
+    // transform spare array into compact array
+    desi.navigation = desi.navigation.filter(function (n) {
+      return n;
     });
 
     return PromiseA.resolve(desi);
@@ -557,7 +555,7 @@
 
       if (!page.yml.date) {
         // TODO tell YAML parser to keep the date a string
-        page.yml.date = new Date(page.yml.created_at || page.yml.time || page.createdDate || page.lastModifiedDate).toISOString();
+        page.yml.date = new Date(page.yml.created_at || page.yml.time || page.yml.updated_at || page.createdDate || page.lastModifiedDate).toISOString();
       }
       if ('object' === typeof page.yml.date) {
         page.yml.date = page.yml.date.toISOString();
@@ -570,9 +568,6 @@
 
     function normalizeContentEntity(entity) {
       entity.ext            = path.extname(entity.path);
-      entity.url            = desi.urls.url + path.join(desi.urls.base_path, entity.yml.permalink);
-      entity.canonical_url  = desi.urls.url + path.join(desi.urls.base_path, entity.yml.permalink);
-      entity.relative_url   = path.join(desi.urls.base_path, entity.yml.permalink);
       entity.published_at   = fromLocaleDate(entity.yml.date);
       entity.year           = entity.published_at.year;
       entity.month          = entity.published_at.month;
@@ -602,7 +597,7 @@
     return PromiseA.resolve(desi);
   };
 
-  Desi.collate = function (desi/*, collectionname*/) {
+  Desi.collate = function (desi, env/*, collectionname*/) {
     function byDate(a, b) {
       if (a.year > b.year) {
         return -1;
@@ -651,6 +646,8 @@
           , mindex = 12 - f.month
           ;
 
+        f.url = path.join(env.base_path, f.yml.permalink);
+
         if (!yearsArr[yindex]) {
           yearsArr[yindex] = { year: f.year, months: [] };
         }
@@ -686,15 +683,217 @@
 
     desi.content.collections.sort(byDate);
     desi.collated = collate(desi.content.collections);
-    console.info('desi.collated');
+    console.info('7 desi.collated');
     console.info(desi.collated);
 
     return PromiseA.resolve(desi);
   };
 
-  Desi.build = function (desi) {
+  Desi.datamaps = {};
+  Desi.datamaps['desirae@1.0'] = function (obj) {
+    obj.desi = obj;
+    return obj;
+  };
+  Desi.datamaps['ruhoh@2.6'] = function (view) {
+    var newview
+      ;
+
+    newview = {
+      content: view.contents
+    , page: {
+        title: view.entity.yml.title || view.site.title
+      , tagline: view.entity.yml.tagline
+      , content: view.contents
+      , youtube: view.entity.yml.youtube
+      , disqus_identifier: view.entity.disqus_identifier
+      , disqus_url: !view.entity.disqus_identifier && view.entity.disqus_url
+      , tags: view.entity.yml.tags
+      , categories: view.entity.yml.categories
+      , player_width: view.entity.yml.player_width
+      , player_height: view.entity.yml.player_height
+      , next: view.entities[view.entity_index + 1]
+      , previous: view.entities[view.entity_index - 1]
+      , date: view.entity.year + '-' + view.entity.month + '-' + view.entity.day
+      // TODO , url: view.entities.
+      }
+    , posts: { collated: view.desi.collated }
+    , urls: {
+        base_url: view.env.base_url
+      , base_path: view.env.base_path
+      }
+    , data: {
+        author: {
+          name: view.author.name
+        , twitter: view.author.twitter
+        }
+      , title: view.site.title
+      }
+    , assets: view.desi.assets.join('\n')
+    , widgets: {
+        comments: view.site.disqus_shortname &&
+          Mustache.render(view.desi.partials.disqus, { disqus: {
+            shortname: view.site.disqus_shortname
+          , identifier: view.entity.disqus_identifier
+          , url: !view.entity.disqus_identifier && view.entity.disqus_url
+          }})
+      , analytics: view.site.google_analytics_tracking_id && 
+          Mustache.render(view.desi.partials.google_analytics, { google_analytics: {
+            tracking_id: view.site.google_analytics_tracking_id
+          }})
+      , facebook_connect: view.desi.partials.facebook_connect
+      , twitter: view.desi.partials.twitter
+      , google_plusone: view.desi.partials.google_plusone
+      , amazon_link_enhancer: view.site.amazon_affiliate_id &&
+          Mustache.render(view.desi.partials.amazon_link_enhancer, {
+            amazon_affiliate_id: view.site.amazon_affiliate_id
+          })
+      }
+    , site: {
+        navigation: view.navigation
+      }
+    };
+
+    // backwards compat
+    newview.site['navigation?to_pages'] = newview.site.navigation;
+    newview.site['navigation?to__root'] = newview.site.navigation;
+    newview.data.navigation = view.site.navigation;
+    newview.data['navigation?to_pages'] = newview.site.navigation;
+    newview.data['navigation?to__root'] = newview.site.navigation;
+
+    newview.page.content = view.contents;
+
+    return newview;
+  };
+
+  Desi.renderers = {};
+  Desi.registerRenderer = function(ext, fn, opts) {
+    // TODO allow a test method for ext and content (new RegExp("\\." + escapeRegExp(ext) + "$", i).test(current.ext))
+    opts = opts || {};
+    // TODO opts.priority
+    Desi.renderers[ext] = Desi.renderers[ext] || [];
+    // LIFO
+    Desi.renderers[ext].unshift(fn);
+  };
+  Desi.render = function (ext, content, view) {
+    ext = (ext||'').toLowerCase().replace(/^\./, '');
+
+    if (Desi.renderers[ext] && Desi.renderers[ext].length) {
+      return Desi.renderers[ext][0](content, view);
+    }
+    return PromiseA.reject(new Error("no renderer registered for ." + ext));
+  };
+
+  function registerJade() {
+    var jade = true || exports.jade || require('jade')
+      ;
+
+    function render(contentstr/*, desi*/) {
+      return PromiseA.resolve(jade(contentstr));
+    }
+
+    if (false) {
+      Desi.registerRenderer('jade', render);
+    }
+  }
+  registerJade();
+
+  function registerMarkdown() {
+    var markitdown  = (exports.markdownit || require('markdown-it'))({ html: true, linkify: true })
+      ;
+
+    function render(contentstr/*, desi*/) {
+      return Promise.resolve(
+        markitdown.render(contentstr)
+          //.replace('&quot;', '"')
+          //.replace('&#39;', "'")
+          //.replace('&#x2F;', '/')
+      );
+    }
+
+    ['md', 'markdown', 'mdown', 'mkdn', 'mkd', 'mdwn', 'mdtxt', 'mdtext'].forEach(function (ext) {
+      Desi.registerRenderer(ext, render);
+    });
+  }
+  registerMarkdown();
+
+  function registerHtml() {
+    function render(contentstr/*, desi*/) {
+      return PromiseA.resolve(contentstr);
+    }
+
+    Desi.registerRenderer('html', render);
+    Desi.registerRenderer('htm', render);
+    Desi.registerRenderer('xhtml', render);
+  }
+  registerHtml();
+
+  function renderLayers(desi, env, view, entity) {
+    var mustached = ''
+      , layers
+      ;
+
+    layers = getLayout(desi, entity.yml.theme, entity.yml.layout, [entity]);
+    // TODO inherit datamap from theme layout
+
+    return forEachAsync(layers, function (current) {
+      var body = (current.body || current.contents || '').trim()
+        ;
+
+      // TODO move to normalization
+      current.path = current.path || (entity.relativePath + '/' + entity.name);
+
+
+      return Desi.render(current.ext, body, view).then(function (html) {
+        var datamap = Desi.datamaps[env.datamap] || Desi.datamaps[entity.datamap] || Desi.datamaps['ruhoh@2.6']
+          , newview
+          ;
+
+        view.contents = mustached;
+
+        // shallowClone to prevent perfect object equality (and potential template caching)
+        if (/Blog$/.test(view.entity.title)) {
+          console.log('desi.partials');
+          console.log(desi.partials);
+        }
+        newview = datamap(view);
+        if (/Blog$/.test(view.entity.title)) {
+          console.info('desi.collated');
+          console.log(desi);
+          console.info('newview.posts.collated');
+          console.log(newview.posts.collated);
+        }
+        mustached = Mustache.render(html, newview, desi.partials);
+
+        return mustached;
+      }).catch(function (e) {
+        console.error(current);
+        if (env.onError) {
+          return env.onError(e);
+        } else {
+          console.error('no registered renderer for ' + entity.path + ' or rendering failed');
+          throw e;
+        }
+      });
+    });
+  }
+
+  Desi.build = function (desi, env) {
     var compiled = []
       ;
+
+    env.transforms = env.transforms || [];
+    desi.transforms = (desi.transforms || []).concat(env.transforms);
+    desi.transforms.push(function (view) {
+      var yml = view.entity.yml
+        ;
+
+      if (yml.uuid) {
+        view.entity.disqus_identifier = yml.uuid;
+      } else {
+        view.entity.disqus_url = view.entity.production_url;
+      }
+      return view;
+    });
 
     /*
     function compileScriptEntity(entity, i, arr) {
@@ -703,160 +902,154 @@
     function compileThemeEntity(entity, i, arr) {
       console.log("compiling " + (i + 1) + "/" + arr.length + " " + (entity.path || entity.name));
       // TODO less / sass / etc
-      compiled.push({ contents: entity.body || entity.contents, path: path.join(desi.config.compiled_path, 'themes', entity.path) });
+      compiled.push({ contents: entity.body || entity.contents, path: path.join('themes', entity.path) });
       if (/stylesheets.*\.css/.test(entity.path) && (!/google/.test(entity.path) || /obsid/.test(entity.path))) {
         // TODO XXX move to a partial
         desi.assets.push(
-          '<link href="' + desi.urls.base_path + '/themes/' + entity.path + '" type="text/css" rel="stylesheet" media="all">'
+          '<link href="' + env.base_path + '/themes/' + entity.path + '" type="text/css" rel="stylesheet" media="all">'
         );
       }
     }
-    desi.navigation.filter(function (n) {
-      return n;
-    });
-    //console.log(desi.navigation);
-    function compileContentEntity(entity, i, arr) {
-      console.log("compiling " + (i + 1) + "/" + arr.length + " " + (entity.path || entity.name));
 
-      var previous = ''
-        , layers
+    function compileContentEntity(entity, i, arr) {
+      console.log("compiling " + (i + 1) + "/" + arr.length + " " + entity.path);
+
+      var navigation = JSON.parse(JSON.stringify(desi.navigation))
+        , author = desi.authors[entity.yml.author] || desi.authors[Object.keys(desi.authors)[0]]
         , view
         ;
 
-      layers = getLayout(desi, entity.yml.theme, entity.yml.layout, [entity]);
+      entity.url            = env.base_url + path.join(env.base_path, entity.yml.permalink);
+      entity.canonical_url  = env.base_url + path.join(env.base_path, entity.yml.permalink);
+      entity.production_url = desi.site.base_url + path.join(desi.site.base_path, entity.yml.permalink);
+      entity.relative_url   = path.join(env.base_path, entity.yml.permalink);
 
-      view = {
-        page: entity.yml // data for just *this* page
-      //, data: desi.data   // data.yml
-      // https://github.com/janl/mustache.js/issues/415
-      , data: num2str(desi.data)
-      , collection: {}    // data for just *this* collection
-      , categories: []    // *all* categories in all collections
-      , tags: []          // *all* tags in all collections
-      , site: num2str(desi.site || {})
-      , url: entity.canonical_url
-      , canonical_url: entity.canonical_url 
-      , relative_url: entity.relative_url
-      , urls: desi.urls
-      , previous: arr[i - 1]
-      , next: arr[i + 1]
-      , posts: { collated: desi.collated }
-        // TODO concat theme, widget, and site assets
-      , assets: desi.assets.join('\n')
-      };
+      // TODO nested names?
+      navigation.forEach(function (nav) {
+        nav.href = env.base_path + '/' + nav.name;
+        nav.path = env.base_path + '/' + nav.name;
 
-      //console.log('rel:', view.relative_url);
-      view.site.author = desi.data.author;
-      view.site.navigation = JSON.parse(JSON.stringify(desi.navigation));
-      view.site.navigation.forEach(function (nav) {
-        
-        if (nav.href === view.relative_url) {
+        // path.basename(nav.path, path.extname(nav.path))
+        if (nav.href.replace(/(\/)?(\/index)?(\.html)?$/i, '') === entity.relative_url.replace(/(\/)?(\/index)?(\.html)?$/i, '')) {
           nav.active = true;
         }
       });
-      // backwards compat
-      view.site['navigation?to_pages'] = view.site.navigation;
-      view.site['navigation?to__root'] = view.site.navigation;
-      view.data.navigation = view.site.navigation;
-      view.data['navigation?to_pages'] = view.site.navigation;
-      view.data['navigation?to__root'] = view.site.navigation;
 
-      layers.forEach(function (current) {
-        // TODO meta.layout
-        var body = (current.body || current.contents || '').trim()
-          , html
-          , curview = {}
-          ;
+      view = {
+        env: env
+      , config: desi.config
+      , site: desi.site
+      , data: desi.data
+      , entity: entity
+      , entity_index: i
+      , entities: arr
+      , desi: desi
+      , navigation: navigation
+      , author: num2str(author)
+      };
 
-        // TODO move to normalization
-        current.path = current.path || (entity.relativePath + '/' + entity.name);
-
-        if (/\.(html|htm)$/.test(current.path)) {
-          html = body;
-        } else if (/\.(md|markdown|mdown|mkdn|mkd|mdwn|mdtxt|mdtext)$/.test(current.ext)) {
-          html = marked.render(body)
-            //.replace('&quot;', '"')
-            //.replace('&#39;', "'")
-            //.replace('&#x2F;', '/')
-            ;
-        } else {
-          console.error('unknown parser for ' + (entity.path));
-        }
-
-        view.content = previous;
-        view.page.content = previous;
-
-        // to prevent perfect object equality (and potential template caching)
-        Object.keys(view).forEach(function (key) {
-          curview[key] = view[key];
-        });
-        previous = Mustache.render(html, curview, desi.partials);
+      desi.transforms.forEach(function (fn) {
+        view = fn(view);
       });
 
-      // NOTE: by now, all permalinks should be in the format /path/to/page.html or /path/to/page/index.html
-      if (/^(index)?(\/?index.html)?$/.test(entity.yml.permalink)) {
-        console.info('found compiled index');
-        compiled.push({ contents: previous, path: path.join(desi.config.compiled_path, 'index.html') });
-      } else {
-        compiled.push({ contents: previous, path: path.join(desi.config.compiled_path, entity.yml.permalink) });
-      }
+      return renderLayers(desi, env, view, entity).then(function (html) {
+        // NOTE: by now, all permalinks should be in the format /path/to/page.html or /path/to/page/index.html
+        if (/^(index)?(\/?index.html)?$/.test(entity.yml.permalink)) {
+          console.info('found compiled index');
+          compiled.push({ contents: html, path: path.join('index.html') });
+        } else {
+          compiled.push({ contents: html, path: path.join(entity.yml.permalink) });
+        }
 
-      entity.yml.redirects = entity.yml.redirects || [];
-      if (/\/index.html$/.test(entity.yml.permalink)) {
-        entity.yml.redirects.push(entity.yml.permalink.replace(/\/index.html$/, '.html'));
-      } else if (/\.html$/.test(entity.yml.permalink)) {
-        entity.yml.redirects.push(entity.yml.permalink.replace(/\.html?$/, '/index.html'));
-      } else {
-        console.info('found index, ignoring redirect');
-      }
-      entity.yml.redirects.forEach(function (redirect) {
-        var content
-          ;
+        entity.yml.redirects = entity.yml.redirects || [];
 
-        // TODO move to partial
-        content = 
-          '<html>'
-            + '<head>'
-              + '<title>Redirecting to ' + entity.yml.title + '</title>'
-              + '<meta http-equiv="refresh" content="0;URL=\''
-                + desi.urls.url + path.join(desi.urls.base_path, entity.yml.permalink)
-              + '\'" />'
-            + '</head>'
-            + '<body>'
-              + '<p>This page has moved to a <a href="'
-                + desi.urls.url + path.join(desi.urls.base_path, entity.yml.permalink)
-              +'">'
-                + entity.yml.title
-              + '</a>.</p>'
-            + '</body>'
-        + '</html>'
-        ;
+        if (/\/index.html$/.test(entity.yml.permalink)) {
+          entity.yml.redirects.push(entity.yml.permalink.replace(/\/index.html$/, '.html'));
+        } else if (/\.html$/.test(entity.yml.permalink)) {
+          entity.yml.redirects.push(entity.yml.permalink.replace(/\.html?$/, '/index.html'));
+        } else {
+          console.info('found index, ignoring redirect');
+        }
 
-        compiled.push({ contents: content, path: path.join(desi.config.compiled_path, redirect) });
+        entity.yml.redirects.forEach(function (redirect) {
+          var html = Mustache.render(desi.partials.redirect, view)
+            ;
+
+          compiled.push({
+            contents: html
+          , path: path.join(redirect)
+          });
+        });
+      }).catch(function (e) {
+        console.error('failing at build step here here here');
+        throw e;
+        if (env.onError) {
+          return env.onError(e);
+        } else {
+          console.error("couldn't render " + entity.path);
+          console.error(entity);
+          console.error(e);
+          throw e;
+        }
       });
     }
 
     function doStuff() {
+      var themes = desi.content.themes.filter(function (f) { return !/\blayouts\b/.test(f.path); })
+        ;
+
       console.info('[first] compiling theme assets');
-      desi.content.themes.filter(function (f) { return !/\blayouts\b/.test(f.path); }).forEach(compileThemeEntity);
-
-      console.info('compiling root pages');
-      desi.content.root.forEach(compileContentEntity);
-      console.info('compiling article pages');
-      desi.content.collections.forEach(compileContentEntity);
-
-      desi.compiled = compiled;
-      return PromiseA.resolve(desi);
+      return forEachAsync(themes, compileThemeEntity).then(function () {
+        console.info('compiling root pages');
+        return forEachAsync(desi.content.root, compileContentEntity).then(function () {
+          console.info('compiling article pages');
+          desi.content.collections.forEach(compileContentEntity);
+        }).then(function () {
+          desi.compiled = compiled;
+          return desi;
+        });
+      });
     }
 
     if (!desi.partials) {
-      return fsapi.getAllPartials().then(doStuff);
+      return fsapi.getAllPartials().then(function (partials) {
+        if (partials.error) {
+          throw partials.error;
+        }
+
+        desi.partials = partials;
+        return doStuff();
+      });
     } else {
       return doStuff();
     }
   };
 
-  Desi.save = function (desi) {
+  Desi.buildAll = function (desi, env) {
+    return Desi.getDirtyFiles(desi, env.since)
+      .then(Desi.parseFrontmatter)
+      .then(Desi.getNav)
+      .then(Desi.normalizeYml)
+      .then(function () {
+        Desi.collate(desi, env)
+      })
+      .then(function () {
+        return Desi.build(desi, env);
+      }).then(function () {
+        return Desi.copyAssets(desi, env);
+      }).catch(function (e) {
+        if (env.onError) {
+          return env.onError(e);
+        } else {
+          console.error('buildAll failed somewhere');
+          console.error(e);
+          throw e;
+        }
+      })
+      ;
+  };
+
+  Desi.write = function (desi, env) {
     var compiled = desi.compiled.slice(0)
       , batches = []
       , now
@@ -867,6 +1060,10 @@
       console.info("No files were deemed worthy to compile. Done");
       return;
     }
+
+    compiled.forEach(function (thing) {
+      thing.path = path.join(env.compiled_path, thing.path);
+    });
 
     // because some servers / proxies are terrible at handling large uploads (>= 100k)
     // (vagrant? or express? one of the two is CRAZY slow)

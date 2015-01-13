@@ -34,7 +34,7 @@ angular.module('myApp.services', []).
           return d.promise;
         }
 
-        Desi.build(desi, env).then(function () {
+        Desi.buildAll(desi, env).then(function () {
           d.resolve(desi);
         });
 

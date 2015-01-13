@@ -11,14 +11,14 @@ angular.module('myApp.build', ['ngRoute'])
 
 .controller('BuildCtrl'
   , ['$scope', '$location', '$timeout', 'Desirae'
-  , function ($scope, $location, $timeout, Desirae) {
+  , function ($scope, $location, $timeout, DesiraeService) {
   var scope = this
     , path = window.path
     ;
 
   function init() {
     console.log('desi loading');
-    Desirae.meta().then(function (desi) {
+    DesiraeService.meta().then(function (desi) {
       scope.blogdir = desi.blogdir.path.replace(/^\/(Users|home)\/[^\/]+\//, '~/');
       scope.site = desi.site;
 
@@ -40,108 +40,50 @@ angular.module('myApp.build', ['ngRoute'])
     scope.extensions = ['md', 'html'];
   }
 
-  scope.onChange = function () {
-    var post = scope.selected.post
-      , selected = scope.selected
-      ;
-
-    post.yml.title = post.yml.title || '';
-    post.yml.description = post.yml.description || '';
-
-    if (selected.permalink === post.yml.permalink) {
-      selected.permalink = '/articles/' + post.yml.title.toLowerCase()
-        .replace(/["']/g, '')
-        .replace(/\W/g, '-')
-        .replace(/^-+/g, '')
-        .replace(/-+$/g, '')
-        .replace(/--/g, '-')
-        + '.' + selected.format
-        ;
-
-      post.yml.permalink = selected.permalink;
-    }
-    if (window.path.extname(post.yml.permalink) !== '.' + selected.format) {
-     post.yml.permalink = post.yml.permalink.replace(/\.\w+$/, '.' + selected.format);
-    }
-
-    post.frontmatter = window.jsyaml.dump(post.yml).trim();
-
-    // TODO use some sort of filepath pattern in config.yml
-    selected.path = window.path.join((selected.collection || 'posts'), window.path.basename(post.yml.permalink));
-    selected.abspath = window.path.join(scope.blogdir, selected.path);
-  };
-  scope.onFrontmatterChange = function () {
-    var data
-      ;
-
-    try {
-      if (!scope.selected.post.frontmatter || !scope.selected.post.frontmatter.trim()) {
-        throw new Error('deleted frontmatter');
-      }
-      data = window.jsyaml.load(scope.selected.post.frontmatter);
-      scope.selected.format = data.permalink.replace(/.*\.(\w+$)/, '$1');
-      if (!data.permalink) {
-        data = scope.selected.permalink;
-      }
-      scope.selected.post.yml = data;
-    } catch(e) {
-      console.error(e);
-      console.error('ignoring update that created parse error');
-      scope.selected.post.frontmatter = window.jsyaml.dump(scope.selected.post.yml).trim();
+  scope.onError = function (e) {
+    console.error(e);
+    if (window.confirm("Encountered an error. Please inspect the console.\n\nWould you like to ignore the error and continue?")) {
+      return window.Promise.resolve();
+    } else {
+      return window.Promise.reject();
     }
   };
 
-  function updateDate() {
-    $timeout.cancel(scope.dtlock);
-    scope.dtlock = $timeout(function () {
-      if (scope.selected && scope.selected.date === scope.selected.post.yml.date) {
-        scope.selected.date = scope.selected.post.yml.date = Desirae.toDesiDate(new Date());
-      }
-      scope.onChange();
-      updateDate();
-    }, 60 * 1000);
-  }
-
-  scope.upsert = function () {
-    console.log('upserted');
-    if (-1 === scope.extensions.indexOf(scope.selected.format)) {
-      window.alert('.' + scope.selected.format + ' is not a supported extension.\n\nPlease choose from: .' + scope.extensions.join(' .'));
-      return;
-    }
-
-    scope.selected.post.yml.uuid = scope.selected.uuid;
-    ['updated', 'theme', 'layout', 'swatch'].forEach(function (key) {
-      if (!scope.selected.post.yml[key]) {
-        delete scope.selected.post.yml[key];
-      }
-    });
-    scope.onChange();
-
-    var files = []
+  scope.buildOne = function (envstr) {
+    var env
       ;
 
-    files.push({
-      path: scope.selected.path
-    , contents: 
-          '---\n'
-        + scope.selected.post.frontmatter.trim()
-        + '\n'
-        + '---\n'
-        + '\n'
-        + scope.selected.post.body.trim()
-    });
+    // TODO is there a legitimate case where in addition to base_path (root of the blog)
+    // a user would need owner_base? i.e. school.edu/~/rogers/blog school.edu/~/rogers/assets
+    if ('production' === envstr) {
+      env = {
+        url: scope.production_url
+      , base_url: scope.development_url.replace(/(https?:\/\/[^\/#?]+)/, '$1')
+      , compiled_path: 'compiled'
+      , since: 0
+      , onError: scope.onError
+      };
+    } else {
+      env = {
+        url: scope.development_url
+      , base_url: scope.development_url.replace(/(https?:\/\/[^\/#?]+)/, '$1')
+      , base_path: scope.development_url.replace(/https?:\/\/[^\/#?]+/, '')
+      , compiled_path: 'compiled_dev'
+      , since: 0
+      , onError: scope.onError
+      };
+    }
 
-    console.log(files);
-    Desirae.putFiles(files).then(function (results) {
-      console.log('TODO check for error');
-      console.log(results);
-      $location.path('/build');
-    }).catch(function (e) {
-      $timeout.cancel(scope.dtlock);
-      console.error(scope.site);
-      console.error(e);
-      window.alert("Error Nation! :/");
-      throw e;
+    return DesiraeService.build(env).then(function () {
+      DesiraeService.write(env);
+    });
+  };
+
+  scope.build = function (envs) {
+    window.forEachAsync(envs, function (env) {
+      return scope.buildOne(env);
+    }).then(function () {
+      window.alert('Build(s) Complete');
     });
   };
 

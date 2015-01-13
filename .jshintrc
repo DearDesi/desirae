@@ -13,4 +13,12 @@
 , "unused": true
 , "latedef": true 
 , "globals": { "angular": true }
+
+, "bitwise": true
+, "curly": true
+, "forin": true
+, "freeze": true
+, "immed": true
+
+, "funcscope": false
 }
