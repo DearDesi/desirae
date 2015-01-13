@@ -892,6 +892,8 @@
       } else {
         view.entity.disqus_url = view.entity.production_url;
       }
+      console.log('entity', view.entity);
+
       return view;
     });
 
@@ -919,10 +921,11 @@
         , view
         ;
 
-      entity.url            = env.base_url + path.join(env.base_path, entity.yml.permalink);
-      entity.canonical_url  = env.base_url + path.join(env.base_path, entity.yml.permalink);
-      entity.production_url = desi.site.base_url + path.join(desi.site.base_path, entity.yml.permalink);
-      entity.relative_url   = path.join(env.base_path, entity.yml.permalink);
+      // TODO still have some index.html mess to work out...
+      entity.url            = env.base_url + path.join(env.base_path, entity.yml.permalink).replace(/\/index.html$/, '/');
+      entity.canonical_url  = env.base_url + path.join(env.base_path, entity.yml.permalink).replace(/\/index.html$/, '/');
+      entity.production_url = desi.site.base_url + path.join(desi.site.base_path, entity.yml.permalink).replace(/\/index.html$/, '/');
+      entity.relative_url   = path.join(env.base_path, entity.yml.permalink).replace(/\/index.html$/, '/');
 
       // TODO nested names?
       navigation.forEach(function (nav) {
@@ -950,6 +953,7 @@
 
       desi.transforms.forEach(function (fn) {
         view = fn(view);
+        console.log('view.entity', view.entity);
       });
 
       return renderLayers(desi, env, view, entity).then(function (html) {
