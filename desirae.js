@@ -363,7 +363,7 @@
       , root: root
       , assets: assets
       };
-      desi.assets = [];
+      desi.styles = [];
 
       return desi;
     });
@@ -744,7 +744,7 @@
         }
       , title: view.site.title
       }
-    , assets: view.desi.assets.join('\n')
+    , styles: view.desi.styles.join('\n')
     , widgets: {
         comments: view.site.disqus_shortname &&
           Mustache.render(view.desi.partials.disqus, { disqus: {
@@ -912,7 +912,7 @@
       compiled.push({ contents: entity.body || entity.contents, path: path.join('themes', entity.path) });
       if (/stylesheets.*\.css/.test(entity.path) && (!/google/.test(entity.path) || /obsid/.test(entity.path))) {
         // TODO XXX move to a partial
-        desi.assets.push(
+        desi.styles.push(
           '<link href="' + path.join(env.base_path, '/themes/', entity.path) + '" type="text/css" rel="stylesheet" media="all">'
         );
       }
