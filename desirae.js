@@ -1009,10 +1009,10 @@
 
       console.info('[first] compiling theme assets');
       return forEachAsync(themes, compileThemeEntity).then(function () {
-        console.info('compiling root pages');
-        return forEachAsync(desi.content.root, compileContentEntity).then(function () {
-          console.info('compiling article pages');
-          desi.content.collections.forEach(compileContentEntity);
+        console.info('compiling article pages');
+        return forEachAsync(desi.content.collections, compileContentEntity).then(function () {
+          console.info('compiling root pages');
+          return forEachAsync(desi.content.root, compileContentEntity);
         }).then(function () {
           desi.compiled = compiled;
           return desi;
