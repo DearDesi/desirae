@@ -818,7 +818,7 @@
       ;
 
     function render(contentstr/*, desi*/) {
-      return Promise.resolve(
+      return PromiseA.resolve(
         markitdown.render(contentstr)
           //.replace('&quot;', '"')
           //.replace('&#39;', "'")
