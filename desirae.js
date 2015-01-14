@@ -264,6 +264,10 @@
         desi.config.assets = { 'media': {} };
       }
 
+      if (!Array.isArray(desi.site.navigation) || !desi.site.navigation.length) {
+        desi.site.navigation = ['archive'];
+      }
+
       var collectionnames = Object.keys(desi.config.collections)
         , themenames = Object.keys(desi.config.themes)
             .filter(function (k) { return 'default' !== k; })
