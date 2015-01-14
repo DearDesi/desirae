@@ -5,6 +5,13 @@ Every template gets an object with the exact same structure - whether it's a tem
 
 Here we only document Desirae's default behavior, but there are many objects added for compatibility with Ruhoh that are not documented.
 
+config.yml vs site.yml
+------
+
+site.yml is for anything that changes the content of the site (navigation, title, analytic and ad ids, default author, etc)
+
+config.yml is for anything that doesn't change the site (from where to read directories, which order to load plugins)
+
 ```
 desi = {}
 ```

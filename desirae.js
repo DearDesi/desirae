@@ -252,7 +252,17 @@
         desi[key]           = clone(arr[key]);
       });
 
+      // TODO just walk all of ./*.yml authors, posts, themes, _root from the get-go
       desi.config.rootdir = desi.config.rootdir || '_root';
+      if ('object' !== typeof desi.config.collections || !Object.keys(desi.config.collections).length) {
+        desi.config.collections = { 'posts': {} };
+      }
+      if ('object' !== typeof desi.config.themes || !Object.keys(desi.config.themes).length) {
+        desi.config.themes = { 'default': 'twitter', 'twitter': {} };
+      }
+      if ('object' !== typeof desi.config.assets || !Object.keys(desi.config.assets).length) {
+        desi.config.assets = { 'media': {} };
+      }
 
       var collectionnames = Object.keys(desi.config.collections)
         , themenames = Object.keys(desi.config.themes)
@@ -302,17 +312,19 @@
       function noErrors(map) {
         Object.keys(map).forEach(function (path) {
           map[path] = map[path].filter(function (m) {
-            if (!m.error && m.size) {
-              return true;
-            }
-
-            if (!m.size) {
-              console.warn("Ignoring 0 byte file " + (m.path || m.name));
+            if (m.error) {
+              console.warn("Couldn't read '" + (m.path || m.name) + "'");
+              console.warn(m.error);
               return false;
             }
 
-            console.warn("Couldn't get stats for " + (m.path || m.name));
-            console.warn(m.error);
+            if (!m.size) {
+              console.warn("Ignoring 0 byte file '" + (m.path || m.name) + "'");
+              console.warn(m.error);
+              return false;
+            }
+
+            return true;
           });
         });
 
