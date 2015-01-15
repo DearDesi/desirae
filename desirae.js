@@ -223,10 +223,6 @@
     }
   }
 
-  console.log('');
-  console.log('');
-  console.info('getting config, data, caches...');
-
   function clone(obj) {
     return JSON.parse(JSON.stringify(obj));
   }
@@ -238,7 +234,7 @@
 
 
 
-  Desi.toLocaleDate = function (d) {
+  Desi.toDesiDate = Desi.toLocaleDate = function (d) {
     return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate())
       + ' '
       + (d.getHours() % 12) + ':' + pad(d.getMinutes()) + ' ' + (d.getHours() - 12 >= 0 ? 'pm' : 'am')
@@ -247,6 +243,10 @@
 
   // read config and such
   Desi.init = function (desi, env) {
+    console.log('');
+    console.log('');
+    console.info('getting config, data, caches...');
+
     if (!exports.window) {
       // TODO pull state out of this later
       Desi.realFsapi.create(Desi, env);
