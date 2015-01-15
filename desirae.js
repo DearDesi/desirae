@@ -16,11 +16,12 @@
   }
 
   if (!exports.window) {
-    Desi.sha1sum  = require('./lib/node-adapters').sha1sum;
-    Desi.fsapi    = require('./lib/node-adapters').fsapi;
+    Desi.sha1sum    = require('./lib/node-adapters').sha1sum;
+    Desi.fsapi      = require('./lib/node-adapters').fsapi;
+    Desi.realFsapi  = require('./lib/node-adapters').realFsapi;
 
     // adds helper methods to fsapi
-    require('./lib/desirae-utils').create(Desi);
+    require('./lib/utils').create(Desi);
     // adds Desi.Frontmatter
     require('./lib/frontmatter').create(Desi);
   }
@@ -245,7 +246,11 @@
   };
 
   // read config and such
-  Desi.init = function (desi) {
+  Desi.init = function (desi, env) {
+    if (!exports.window) {
+      // TODO pull state out of this later
+      Desi.realFsapi.create(Desi, env);
+    }
     // config.yml, data.yml, site.yml, authors
     return PromiseA.all([Desi.fsapi.getAllConfigFiles()/*, fsapi.getBlogdir()*/]).then(function (plop) {
       var arr = plop[0]
