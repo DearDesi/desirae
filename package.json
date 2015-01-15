@@ -1,14 +1,14 @@
 {
   "name": "desirae",
-  "version": "0.1.0",
-  "description": "An in-browser knockoff of the Ruhoh static blog generator. (similar to Jekyll, Octopress, Nanoc, etc)",
+  "version": "0.9.0",
+  "description": "An in-browser static blog library and static site generator. Similar to Jekyll, Octopress, Nanoc, etc",
   "main": "desirae.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "repository": {
     "type": "git",
-    "url": "git@github.com:coolaj86/deardesi.git"
+    "url": "git@github.com:DearDesi/desirae.git"
   },
   "keywords": [
     "dear",
@@ -25,9 +25,9 @@
   "author": "AJ ONeal",
   "license": "Apache2",
   "bugs": {
-    "url": "https://github.com/coolaj86/deardesi/issues"
+    "url": "https://github.com/DearDesi/desirae/issues"
   },
-  "homepage": "https://github.com/coolaj86/deardesi",
+  "homepage": "https://github.com/DearDesi/desirae",
   "dependencies": {
     "bluebird": "^2.5.3",
     "escape-string-regexp": "^1.0.2",
