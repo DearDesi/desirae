@@ -7,8 +7,8 @@
     , forEachAsync  = exports.forEachAsync  || require('foreachasync').forEachAsync
     , months
     , THEME_PREFIX  = 'themes'
-    //, sha1sum       = exports.sha1sum       || require('./lib/deardesi-node').sha1sum
-    //, safeResolve   = exports.safeResolve   || require('./lib/deardesi-utils').safeResolve
+    //, sha1sum       = exports.sha1sum       || require('./lib/node-adaptors').sha1sum
+    //, safeResolve   = exports.safeResolve   || require('./lib/utils').safeResolve
     //, UUID          = exports.uuid          || require('node-uuid')
     ;
 
@@ -16,10 +16,13 @@
   }
 
   if (!exports.window) {
+    Desi.sha1sum  = require('./lib/node-adapters').sha1sum;
+    Desi.fsapi    = require('./lib/node-adapters').fsapi;
+
+    // adds helper methods to fsapi
+    require('./lib/desirae-utils').create(Desi);
     // adds Desi.Frontmatter
     require('./lib/frontmatter').create(Desi);
-    // adds Desi.fsapi
-    require('./lib/deardesi-node').create(Desi);
   }
 
   months = {
@@ -228,8 +231,8 @@
   }
 
   Desi.YAML = {
-    parse:      exports.jsyaml.load || require('jsyaml').load
-  , stringify:  exports.jsyaml.dump || require('jsyaml').dump
+    parse:      (exports.jsyaml || require('js-yaml')).load
+  , stringify:  (exports.jsyaml || require('js-yaml')).dump
   };
 
 
@@ -1131,10 +1134,6 @@
       );
     });
   };
-
-  if (!exports.window && !exports.window.Mustache) {
-    Desi.fsapi = require('./lib/fsapi');
-  }
 
   exports.Desirae = exports.Desi = Desi.Desirae = Desi.Desi = Desi;
 }('undefined' !== typeof exports && exports || window));
