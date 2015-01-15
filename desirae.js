@@ -5,14 +5,22 @@
     , path          = exports.path          || require('path')
     , Mustache      = exports.Mustache      || require('mustache')
     , forEachAsync  = exports.forEachAsync  || require('foreachasync').forEachAsync
-    //, sha1sum       = exports.sha1sum       || require('./lib/deardesi-node').sha1sum
-    , frontmatter   = exports.Frontmatter   || require('./lib/frontmatter').Frontmatter
-    //, safeResolve   = exports.safeResolve   || require('./lib/deardesi-utils').safeResolve
-    , fsapi         = exports.fsapi         || require('./lib/deardesi-node').fsapi
-    //, UUID          = exports.uuid          || require('node-uuid')
     , months
     , THEME_PREFIX  = 'themes'
+    //, sha1sum       = exports.sha1sum       || require('./lib/deardesi-node').sha1sum
+    //, safeResolve   = exports.safeResolve   || require('./lib/deardesi-utils').safeResolve
+    //, UUID          = exports.uuid          || require('node-uuid')
     ;
+
+  function Desi() {
+  }
+
+  if (!exports.window) {
+    // adds Desi.Frontmatter
+    require('./lib/frontmatter').create(Desi);
+    // adds Desi.fsapi
+    require('./lib/deardesi-node').create(Desi);
+  }
 
   months = {
     1: 'January'
@@ -95,7 +103,7 @@
 
   function readFrontmatter(things) {
     return forEachAsync(things, function (file) {
-      var parts = frontmatter.parse(file.contents)
+      var parts = Desi.Frontmatter.parse(file.contents)
         ;
 
       if (!file.sha1) {
@@ -219,8 +227,12 @@
     return JSON.parse(JSON.stringify(obj));
   }
 
-  function Desi() {
-  }
+  Desi.YAML = {
+    parse:      exports.jsyaml.load || require('jsyaml').load
+  , stringify:  exports.jsyaml.dump || require('jsyaml').dump
+  };
+
+
 
   Desi.toLocaleDate = function (d) {
     return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate())
@@ -232,7 +244,7 @@
   // read config and such
   Desi.init = function (desi) {
     // config.yml, data.yml, site.yml, authors
-    return PromiseA.all([fsapi.getAllConfigFiles()/*, fsapi.getBlogdir()*/]).then(function (plop) {
+    return PromiseA.all([Desi.fsapi.getAllConfigFiles()/*, fsapi.getBlogdir()*/]).then(function (plop) {
       var arr = plop[0]
         //, blogdir = plop[1]
         ; 
@@ -279,31 +291,31 @@
 
       // TODO make document configurability
       return PromiseA.all([
-        fsapi.getMeta(
+        Desi.fsapi.getMeta(
           themenames.map(function (n) { return path.join(THEME_PREFIX, n); })
         , { dotfiles: false 
           , extensions: ['md', 'markdown', 'htm', 'html', 'jade', 'css', 'js', 'yml']
           }
         )
-      , fsapi.getMeta(
+      , Desi.fsapi.getMeta(
           [desi.config.rootdir]
         , { dotfiles: false
           , extensions: ['md', 'markdown', 'htm', 'html', 'jade']
           }
         )
-      , fsapi.getMeta(
+      , Desi.fsapi.getMeta(
           collectionnames
         , { dotfiles: false
           , extensions: ['md', 'markdown', 'htm', 'html', 'jade']
           }
         )
-      , fsapi.getMeta(
+      , Desi.fsapi.getMeta(
           assetnames
         , { dotfiles: false 
           //, extensions: ['md', 'markdown', 'htm', 'html', 'jade', 'css', 'js', 'yml']
           }
         )
-      , fsapi.getCache()
+      , Desi.fsapi.getCache()
       ]);
     }).then(function (things) {
       console.info('loaded theme meta, root meta, collection meta');
@@ -407,9 +419,9 @@
     */
     
     return PromiseA.all([
-      Object.keys(droot).length ? fsapi.getContents(Object.keys(droot)) : PromiseA.resolve([])
-    , Object.keys(dfiles).length ? fsapi.getContents(Object.keys(dfiles)) : PromiseA.resolve([])
-    , Object.keys(dthemes).length ? fsapi.getContents(Object.keys(dthemes)) : PromiseA.resolve([])
+      Object.keys(droot).length ? Desi.fsapi.getContents(Object.keys(droot)) : PromiseA.resolve([])
+    , Object.keys(dfiles).length ? Desi.fsapi.getContents(Object.keys(dfiles)) : PromiseA.resolve([])
+    , Object.keys(dthemes).length ? Desi.fsapi.getContents(Object.keys(dthemes)) : PromiseA.resolve([])
     ]).then(function (arr) {
       // TODO XXX display errors in html
       function noErrors(o) {
@@ -448,7 +460,7 @@
       });
     });
 
-    return (Object.keys(files).length && fsapi.copy(files).then(function (copied) {
+    return (Object.keys(files).length && Desi.fsapi.copy(files).then(function (copied) {
       if (copied.error) {
         console.error(copied.error);
         throw new Error(copied.error);
@@ -707,12 +719,20 @@
     return PromiseA.resolve(desi);
   };
 
-  Desi.datamaps = {};
-  Desi.datamaps['desirae@1.0'] = function (obj) {
+  Desi._datamaps = {};
+  Desi.registerDataMapper = function (name, fn) {
+    if (!Desi._datamaps[name]) {
+      Desi._datamaps[name] = fn;
+    } else {
+      console.warn("ignoring additional data mapper for '"
+        + name + "' (there's already one assigned)");
+    }
+  };
+  Desi.registerDataMapper('desirae@1.0', function (obj) {
     obj.desi = obj;
     return obj;
-  };
-  Desi.datamaps['ruhoh@2.6'] = function (view) {
+  });
+  Desi.registerDataMapper('ruhoh@2.6', function (view) {
     var newview
       ;
 
@@ -781,10 +801,11 @@
     newview.page.content = view.contents;
 
     return newview;
-  };
+  });
 
   Desi.renderers = {};
   Desi.registerRenderer = function(ext, fn, opts) {
+    ext = ext.replace(/^\./, '');
     // TODO allow a test method for ext and content (new RegExp("\\." + escapeRegExp(ext) + "$", i).test(current.ext))
     opts = opts || {};
     // TODO opts.priority
@@ -851,7 +872,6 @@
       ;
 
     layers = getLayout(desi, entity.yml.theme, entity.yml.layout, [entity]);
-    // TODO inherit datamap from theme layout
 
     return forEachAsync(layers, function (current) {
       var body = (current.body || current.contents || '').trim()
@@ -862,7 +882,8 @@
 
 
       return Desi.render(current.ext, body, view).then(function (html) {
-        var datamap = Desi.datamaps[env.datamap] || Desi.datamaps[entity.datamap] || Desi.datamaps['ruhoh@2.6']
+        // TODO inherit datamap from theme layout
+        var datamap = Desi._datamaps[env.datamap] || Desi._datamaps[entity.datamap] || Desi._datamaps['ruhoh@2.6']
           , newview
           ;
 
@@ -992,8 +1013,6 @@
           });
         });
       }).catch(function (e) {
-        console.error('failing at build step here here here');
-        throw e;
         if (env.onError) {
           return env.onError(e);
         } else {
@@ -1023,7 +1042,7 @@
     }
 
     if (!desi.partials) {
-      return fsapi.getAllPartials().then(function (partials) {
+      return Desi.fsapi.getAllPartials().then(function (partials) {
         if (partials.error) {
           throw partials.error;
         }
@@ -1042,7 +1061,7 @@
       .then(Desi.getNav)
       .then(Desi.normalizeYml)
       .then(function () {
-        Desi.collate(desi, env)
+        Desi.collate(desi, env);
       })
       .then(function () {
         return Desi.build(desi, env);
@@ -1086,7 +1105,7 @@
     now = Date.now();
     console.info('compiled files');
     return forEachAsync(batches, function (files) {
-      return fsapi.putFiles(files).then(function (saved) {
+      return Desi.fsapi.putFiles(files).then(function (saved) {
         size += saved.size;
 
         if (saved.error) {
@@ -1116,5 +1135,6 @@
   if (!exports.window && !exports.window.Mustache) {
     Desi.fsapi = require('./lib/fsapi');
   }
-  exports.Desi = Desi.Desi = Desi;
+
+  exports.Desirae = exports.Desi = Desi.Desirae = Desi.Desi = Desi;
 }('undefined' !== typeof exports && exports || window));
