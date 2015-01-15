@@ -775,6 +775,7 @@
       , title: view.site.title
       }
     , styles: view.desi.styles.join('\n')
+    , assets: view.desi.styles.join('\n')
     , widgets: {
         comments: view.site.disqus_shortname &&
           Mustache.render(view.desi.partials.disqus, { disqus: {
