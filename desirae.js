@@ -11,6 +11,7 @@
     , fsapi         = exports.fsapi         || require('./lib/deardesi-node').fsapi
     //, UUID          = exports.uuid          || require('node-uuid')
     , months
+    , THEME_PREFIX  = 'themes'
     ;
 
   months = {
@@ -183,7 +184,8 @@
     }
 
 
-    themepath = themename + '/' + layoutdir + '/' + layout;
+    // THEME PREFIX
+    themepath = path.join(THEME_PREFIX, themename, layoutdir, layout);
 
     desi.content.themes.some(function (theme) {
       // TODO what if it isn't html?
@@ -204,7 +206,7 @@
     if (file.yml && file.yml.layout) {
       return getLayout(desi, themename, file.yml.layout, arr);
     } else {
-      // return the chain page -> posts -> default -> twitter
+      // return the chain page -> posts -> default -> bootstrap-2
       return arr;
     }
   }
@@ -258,7 +260,7 @@
         desi.config.collections = { 'posts': {} };
       }
       if ('object' !== typeof desi.config.themes || !Object.keys(desi.config.themes).length) {
-        desi.config.themes = { 'default': 'twitter', 'twitter': {} };
+        desi.config.themes = { 'default': 'bootstrap-2', 'bootstrap-2': {} };
       }
       if ('object' !== typeof desi.config.assets || !Object.keys(desi.config.assets).length) {
         desi.config.assets = { 'media': {} };
@@ -278,7 +280,7 @@
       // TODO make document configurability
       return PromiseA.all([
         fsapi.getMeta(
-          themenames
+          themenames.map(function (n) { return path.join(THEME_PREFIX, n); })
         , { dotfiles: false 
           , extensions: ['md', 'markdown', 'htm', 'html', 'jade', 'css', 'js', 'yml']
           }
@@ -909,11 +911,11 @@
     function compileThemeEntity(entity, i, arr) {
       console.log("compiling " + (i + 1) + "/" + arr.length + " " + (entity.path || entity.name));
       // TODO less / sass / etc
-      compiled.push({ contents: entity.body || entity.contents, path: path.join('themes', entity.path) });
+      compiled.push({ contents: entity.body || entity.contents, path: path.join(entity.path) });
       if (/stylesheets.*\.css/.test(entity.path) && (!/google/.test(entity.path) || /obsid/.test(entity.path))) {
         // TODO XXX move to a partial
         desi.styles.push(
-          '<link href="' + path.join(env.base_path, '/themes/', entity.path) + '" type="text/css" rel="stylesheet" media="all">'
+          '<link href="' + path.join(env.base_path, entity.path) + '" type="text/css" rel="stylesheet" media="all">'
         );
       }
     }
