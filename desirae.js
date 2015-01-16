@@ -526,7 +526,6 @@
         , nindex
         ;
 
-      console.log('page.path', page.path);
       if (alwaysAdd && /^(_root\/)index(\.\w+)$/i.test(page.path)) {
         return;
       }
