@@ -178,7 +178,12 @@
     return byDirty;
   }
 
-  function getLayout(desi, themename, layout, arr) {
+  function getLayout(desi, themename, layoutname, arr, i) {
+    if (i > (desi.config.max_layouth_depth || 10)) {
+      console.error('desi.config.yml:max_layouth_depth if your layouts intentionally nest more than ' + i + ' levels deep');
+      throw new Error("Possible circular dependency in theme '" + themename + "', layout '" + layoutname + "'");
+    }
+    i = i || 0;
     // TODO meta.layout for each entity
     arr = arr || [];
 
@@ -190,14 +195,20 @@
     if (!themename) {
       themename = desi.config.themes.default;
     }
-    if (!layout) {
-      // TODO make configurable
-      layout = 'posts.html';
+
+    // defaults to ruhoh-twitter defaults
+    if ('__page__' === layoutname) {
+      layoutname = desi.config.themes[themename].pageLayout || 'page';
+    } else if ('__post__' === layoutname) {
+      layoutname = desi.config.themes[themename].postLayout || 'post';
+    } else if (!layoutname) {
+      // TODO assign __post__ in a previous step and do away with this case
+      layoutname = desi.config.themes[themename].postLayout || 'post';
     }
 
 
     // THEME PREFIX
-    themepath = path.join(THEME_PREFIX, themename, layoutdir, layout);
+    themepath = path.join(THEME_PREFIX, themename, layoutdir, layoutname);
 
     desi.content.themes.some(function (theme) {
       // TODO what if it isn't html?
@@ -215,12 +226,16 @@
     }
 
     // TODO handle possible circular dep condition page -> post -> page
-    if (file.yml && file.yml.layout) {
-      return getLayout(desi, themename, file.yml.layout, arr);
-    } else {
-      // return the chain page -> posts -> default -> bootstrap-2
+    if (!file.yml || !file.yml.layout) {
+      // return the chain page -> posts -> default -> ruhoh-twitter
       return arr;
     }
+
+    if (!file.yml || !file.yml.layout) {
+      return arr;
+    }
+
+    return getLayout(desi, themename, file.yml.layout, arr, i + 1);
   }
 
   function clone(obj) {
@@ -251,8 +266,6 @@
   };
 
   Desi.init = function (desi, env) {
-    console.log('');
-    console.log('');
     console.info('getting config, data, caches...');
 
     if (!exports.window) {
@@ -266,11 +279,7 @@
         ; 
 
       console.info('loaded config, data, caches, partials');
-      console.log({
-        config:   arr.config
-      , site:     arr.site
-      , authors:  arr.authors
-      });
+      /* console.log({ config:   arr.config , site:     arr.site , authors:  arr.authors }); */
 
       //desi.blogdir = blogdir;
       desi.originals = {};
@@ -288,14 +297,14 @@
         desi.config.collections = { 'posts': {} };
       }
       if ('object' !== typeof desi.config.themes || !Object.keys(desi.config.themes).length) {
-        desi.config.themes = { 'default': 'bootstrap-2', 'bootstrap-2': {} };
+        desi.config.themes = { 'default': 'ruhoh-twitter', 'ruhoh-twitter': {} };
       }
       if ('object' !== typeof desi.config.assets || !Object.keys(desi.config.assets).length) {
         desi.config.assets = { 'media': {} };
       }
 
       if (!Array.isArray(desi.site.navigation) || !desi.site.navigation.length) {
-        desi.site.navigation = ['archive'];
+        desi.site.navigation = []; // ['archive'];
       }
 
       var collectionnames = Object.keys(desi.config.collections)
@@ -335,13 +344,7 @@
       ]);
     }).then(function (things) {
       console.info('loaded theme meta, root meta, collection meta');
-      console.log({
-        theme:      things[0]
-      , root:       things[1]
-      , collection: things[2]
-      , asset:      things[3]
-      , cache:      things[4]
-      });
+      /* console.log({ theme:      things[0] , root:       things[1] , collection: things[2] , asset:      things[3] , cache:      things[4] }); */
 
       function noErrors(map) {
         Object.keys(map).forEach(function (path) {
@@ -500,6 +503,13 @@
   };
 
   Desi.getNav = function (desi) {
+    var alwaysAdd = true
+      ;
+
+    if (desi.site.navigation.length) {
+      alwaysAdd = false;
+    }
+
     // TODO add missing metadata and resave file
     desi.navigation = [];
 
@@ -509,10 +519,17 @@
         , nindex
         ;
 
+      console.log('page.path', page.path);
+      if (alwaysAdd && /^(_root\/)index(\.\w+)$/i.test(page.path)) {
+        return;
+      }
+
       //if (-1 === desi.data.navigation.indexOf(name) && 'index' !== name)
       nindex = (desi.site.navigation).indexOf(name);
-      if (-1 === nindex) {
+      if (!alwaysAdd && -1 === nindex) {
         return;
+      } else {
+        nindex = desi.navigation.length;
       }
 
       desi.navigation[nindex] = {
@@ -534,7 +551,7 @@
     desi.content.root.forEach(function (page) {
       page.yml = page.yml || {};
       // TODO make default layout configurable
-      page.yml.layout = page.yml.layout || '_root';
+      page.yml.layout = page.yml.layout || '__page__';
 
       if (!page.relativePath) {
         page.relativePath = path.dirname(page.path);
@@ -748,6 +765,12 @@
     obj.desi = obj;
     return obj;
   });
+  /*
+  Desi.registerDataMapper('ruhoh@twitter', function (view) {
+  });
+  Desi.registerDataMapper('ruhoh@bootstrap-2', function (view) {
+  });
+  */
   Desi.registerDataMapper('ruhoh@2.6', function (view) {
     var newview
       ;
@@ -755,8 +778,9 @@
     newview = {
       content: view.contents
     , page: {
-        title: view.entity.yml.title || view.site.title
-      , tagline: view.entity.yml.tagline
+        title: view.entity.yml.title || view.site.title     // in rt
+      , tagline: view.entity.yml.tagline                    // in rt
+      , description: view.entity.yml.description            // in rt
       , content: view.contents
       , youtube: view.entity.yml.youtube
       , tags: view.entity.yml.tags
@@ -768,6 +792,11 @@
       , date: view.entity.year + '-' + view.entity.month + '-' + view.entity.day
       // TODO , url: view.entities.
       }
+    , 'page?previous': view.entities[view.entity_index - 1] // ruhoh-twitter only
+        // should contain { url: ..., title: ... }
+    , 'page?next': view.entities[view.entity_index + 1]     // ruhoh-twitter only
+    , 'page.categories?to_categories': []                   // ruhoh-twitter only
+    , 'page.tags?to_tags': []                               // ruhoh-twitter only
     , posts: { collated: view.desi.collated }
     , urls: {
         base_url: view.env.base_url
@@ -783,7 +812,7 @@
       , title: view.site.title
       }
     , styles: view.desi.styles.join('\n')
-    , assets: view.desi.styles.join('\n')
+    , assets: view.desi.styles.join('\n') // ruhoh-twitter
     , widgets: {
         comments: view.site.disqus_shortname &&
           Mustache.render(view.desi.partials.disqus, { disqus: {
@@ -805,11 +834,15 @@
       }
     , site: {
         navigation: view.navigation
+      , title: view.site.title                              // ruhoh-twitter only
+      , author: {                                           // ruhoh-twitter only
+          name: view.author.name                            // ruhoh-twitter only
+        }
       }
     };
 
     // backwards compat
-    newview.site['navigation?to_pages'] = newview.site.navigation;
+    newview.site['navigation?to_pages'] = newview.site.navigation;  // ruhoh-twitter only
     newview.site['navigation?to__root'] = newview.site.navigation;
     newview.data.navigation = view.site.navigation;
     newview.data['navigation?to_pages'] = newview.site.navigation;
