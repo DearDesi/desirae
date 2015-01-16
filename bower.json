@@ -1,6 +1,6 @@
 {
   "name": "desirae",
-  "version": "0.1.0",
+  "version": "0.9.5",
   "authors": [
     "AJ ONeal <awesome@coolaj86.com>"
   ],
@@ -39,7 +39,7 @@
     "forEachAsync": "~5.0.5",
     "js-yaml": "~3.2.5",
     "markdown-it": "~3.0.2",
-    "mustache": "~0.8.2",
+    "mustache": "~1.0.0",
     "node-uuid": "~1.4.2",
     "path": "~3.46.1"
   }

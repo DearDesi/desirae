@@ -1,6 +1,6 @@
 {
   "name": "desirae",
-  "version": "0.9.5",
+  "version": "0.9.6",
   "description": "An in-browser static blog library and static site generator. Similar to Jekyll, Octopress, Nanoc, etc",
   "main": "desirae.js",
   "scripts": {
