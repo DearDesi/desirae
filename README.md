@@ -70,25 +70,11 @@ It's an artifact of this project being born out of the ashes of my
 
 ### Getting Started
 
-First off you need to have a browser and io.js/node.js compatible IIFE and declare a state object that will be used in every *desirae* action.
+First off you need to declare a state object that will be used in every *desirae* action.
 
 ```javascript
-/*jshint -W054 */
-;(function (exports) {
-  'use strict';
- 
-  var DesiraeMyModule = {}
-    , desi = {}
-    ;
-
-  // ... a bunch of code ...
-
-  DesiraeMyModule.doStuff = doStuff;
-
-  exports.DesiraeMyModule = DesiraeMyModule.DesiraeMyModule = DesiraeMyModule;
-}('undefined' !== typeof exports && exports || window));
-
-;(function () {})
+var desi = {}
+  ;
 ```
 
 After that you'll load any plugins you need.
@@ -139,7 +125,28 @@ Desirae.write(desi, env).then(function () {
 });
 ```
 
-And be mindful that your code needs to run in both iojs/node and browser environments,
+
+### Plugins
+
+You need to start every file with a wrapper that is browser and io.js/node.js compatible
+
+```javascript
+/*jshint -W054 */
+;(function (exports) {
+  'use strict';
+ 
+  var DesiraeMyModule = {}
+    ;
+
+  // ... a bunch of code ...
+
+  DesiraeMyModule.doStuff = doStuff;
+
+  exports.DesiraeMyModule = DesiraeMyModule.DesiraeMyModule = DesiraeMyModule;
+}('undefined' !== typeof exports && exports || window));
+```
+
+Other than that, just be mindful that your code needs to run in both iojs/node and browser environments
 so steer away from things that are super iojs/node-ish or super window-ish.
 
 Configuration
