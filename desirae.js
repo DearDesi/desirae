@@ -242,6 +242,14 @@
   };
 
   // read config and such
+  Desi._initFileAdapter = function (env) {
+    if (!exports.window) {
+      // TODO pull state out of this later
+      Desi.realFsapi.create(Desi, env);
+    }
+    return PromiseA.resolve();
+  };
+
   Desi.init = function (desi, env) {
     console.log('');
     console.log('');
