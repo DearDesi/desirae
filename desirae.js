@@ -193,7 +193,7 @@
       ;
 
     if (!themename) {
-      themename = desi.config.themes.default;
+      themename = desi.site.theme;
     }
 
     // defaults to ruhoh-twitter defaults
@@ -215,6 +215,10 @@
       if (theme.path === themepath || theme.path.match(themepath + '\\.html')) {
         file = theme;
         theme.ext = path.extname(file.path);
+        // TODO merge with yml?
+        theme.config = desi.config.themes[themename];
+        theme.themename = themename;
+        theme.layoutname = layoutname;
         arr.push(theme);
         return true;
       }
@@ -297,12 +301,15 @@
         desi.config.collections = { 'posts': {} };
       }
       if ('object' !== typeof desi.config.themes || !Object.keys(desi.config.themes).length) {
-        desi.config.themes = { 'default': 'ruhoh-twitter', 'ruhoh-twitter': {} };
+        desi.config.themes = { 'ruhoh-twitter': {} };
       }
       if ('object' !== typeof desi.config.assets || !Object.keys(desi.config.assets).length) {
         desi.config.assets = { 'media': {} };
       }
 
+      if ('string' !== typeof desi.site.theme) {
+        desi.site.theme = 'ruhoh-twitter';
+      }
       if (!Array.isArray(desi.site.navigation) || !desi.site.navigation.length) {
         desi.site.navigation = []; // ['archive'];
       }
@@ -765,93 +772,6 @@
     obj.desi = obj;
     return obj;
   });
-  /*
-  Desi.registerDataMapper('ruhoh@twitter', function (view) {
-  });
-  Desi.registerDataMapper('ruhoh@bootstrap-2', function (view) {
-  });
-  */
-  Desi.registerDataMapper('ruhoh@2.6', function (view) {
-    var newview
-      ;
-
-    newview = {
-      content: view.contents
-    , page: {
-        title: view.entity.yml.title || view.site.title     // in rt
-      , tagline: view.entity.yml.tagline                    // in rt
-      , description: view.entity.yml.description            // in rt
-      , content: view.contents
-      , youtube: view.entity.yml.youtube
-      , tags: view.entity.yml.tags
-      , categories: view.entity.yml.categories
-      , player_width: view.entity.yml.player_width
-      , player_height: view.entity.yml.player_height
-      , next: view.entities[view.entity_index + 1]
-      , previous: view.entities[view.entity_index - 1]
-      , date: view.entity.year + '-' + view.entity.month + '-' + view.entity.day
-      // TODO , url: view.entities.
-      }
-    , 'page?previous': view.entities[view.entity_index - 1] // ruhoh-twitter only
-        // should contain { url: ..., title: ... }
-    , 'page?next': view.entities[view.entity_index + 1]     // ruhoh-twitter only
-    , 'page.categories?to_categories': []                   // ruhoh-twitter only
-    , 'page.tags?to_tags': []                               // ruhoh-twitter only
-    , posts: { collated: view.desi.collated }
-    , urls: {
-        base_url: view.env.base_url
-        // /something -> good (leading slash)
-        // / -> bad (trailing slash)
-      , base_path: view.env.base_path.replace(/^\/$/, '')
-      }
-    , data: {
-        author: {
-          name: view.author.name
-        , twitter: view.author.twitter
-        }
-      , title: view.site.title
-      }
-    , styles: view.desi.styles.join('\n')
-    , assets: view.desi.styles.join('\n') // ruhoh-twitter
-    , widgets: {
-        comments: view.site.disqus_shortname &&
-          Mustache.render(view.desi.partials.disqus, { disqus: {
-            shortname: view.site.disqus_shortname
-          , identifier: view.entity.disqus_identifier || undefined
-          , url: !view.entity.disqus_identifier && view.entity.disqus_url || undefined
-          }})
-      , analytics: view.site.google_analytics_tracking_id && 
-          Mustache.render(view.desi.partials.google_analytics, { google_analytics: {
-            tracking_id: view.site.google_analytics_tracking_id
-          }})
-      , facebook_connect: view.desi.partials.facebook_connect
-      , twitter: view.desi.partials.twitter
-      , google_plusone: view.desi.partials.google_plusone
-      , amazon_link_enhancer: view.site.amazon_affiliate_id &&
-          Mustache.render(view.desi.partials.amazon_link_enhancer, {
-            amazon_affiliate_id: view.site.amazon_affiliate_id
-          })
-      }
-    , site: {
-        navigation: view.navigation
-      , title: view.site.title                              // ruhoh-twitter only
-      , author: {                                           // ruhoh-twitter only
-          name: view.author.name                            // ruhoh-twitter only
-        }
-      }
-    };
-
-    // backwards compat
-    newview.site['navigation?to_pages'] = newview.site.navigation;  // ruhoh-twitter only
-    newview.site['navigation?to__root'] = newview.site.navigation;
-    newview.data.navigation = view.site.navigation;
-    newview.data['navigation?to_pages'] = newview.site.navigation;
-    newview.data['navigation?to__root'] = newview.site.navigation;
-
-    newview.page.content = view.contents;
-
-    return newview;
-  });
 
   Desi.renderers = {};
   Desi.registerRenderer = function(ext, fn, opts) {
@@ -921,6 +841,7 @@
       , layers
       ;
 
+    // BUG XXX the entity doesn't get a datamap (though it probably doesn't need one)
     layers = getLayout(desi, entity.yml.theme, entity.yml.layout, [entity]);
 
     return forEachAsync(layers, function (current) {
@@ -932,8 +853,8 @@
 
 
       return Desi.render(current.ext, body, view).then(function (html) {
-        // TODO inherit datamap from theme layout
-        var datamap = Desi._datamaps[env.datamap] || Desi._datamaps[entity.datamap] || Desi._datamaps['ruhoh@2.6']
+        // TODO organize datamap inheritence
+        var datamap = Desi._datamaps[current.config && current.datamap] || Desi._datamaps[env.datamap] || Desi._datamaps[entity.datamap] || Desi._datamaps['ruhoh@2.6']
           , newview
           ;
 
