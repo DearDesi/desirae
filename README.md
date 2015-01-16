@@ -70,14 +70,34 @@ It's an artifact of this project being born out of the ashes of my
 
 ### Getting Started
 
-First off you need to declare a state object that will be used in every *desirae* action.
+First off you need to have a browser and io.js/node.js compatible IIFE and declare a state object that will be used in every *desirae* action.
 
 ```javascript
-var desi = {}
-  ;
+/*jshint -W054 */
+;(function (exports) {
+  'use strict';
+ 
+  var DesiraeMyModule = {}
+    , desi = {}
+    ;
+
+  // ... a bunch of code ...
+
+  DesiraeMyModule.doStuff = doStuff;
+
+  exports.DesiraeMyModule = DesiraeMyModule.DesiraeMyModule = DesiraeMyModule;
+}('undefined' !== typeof exports && exports || window));
+
+;(function () {})
 ```
 
-After that you'll initialize Desirae with an *environment*.
+After that you'll load any plugins you need.
+
+```javascript
+Desi.registerDataMapper('ruhoh', window.DesiraeDatamapRuhoh || require('desirae-datamap-ruhoh').DesiraeDatamapRuhoh);
+```
+
+And then you'll initialize Desirae with an *environment*.
 
 ```javascript
 Desirae.init(
@@ -118,6 +138,9 @@ Desirae.write(desi, env).then(function () {
   console.log('Desirae pushd all files to the appropriate fs adapter!');
 });
 ```
+
+And be mindful that your code needs to run in both iojs/node and browser environments,
+so steer away from things that are super iojs/node-ish or super window-ish.
 
 Configuration
 =============
