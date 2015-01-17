@@ -606,11 +606,9 @@
           console.info('found index again');
           yml.permalink = page.htmlpath;
         }
-        console.info('1', yml.permalink);
       }
 
       if (!/\.html?$/.test(yml.permalink)) {
-        console.info(page.yml.permalink);
         yml.permalink = path.join(yml.permalink, 'index.html');
       }
 
@@ -752,8 +750,6 @@
 
     desi.content.collections.sort(byDate);
     desi.collated = collate(desi.content.collections);
-    console.info('7 desi.collated');
-    console.info(desi.collated);
 
     return PromiseA.resolve(desi);
   };
