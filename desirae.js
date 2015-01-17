@@ -1063,7 +1063,7 @@
 
     // because some servers / proxies are terrible at handling large uploads (>= 100k)
     // (vagrant? or express? one of the two is CRAZY slow)
-    console.info('saving compiled files', desi.compiled);
+    console.info('saving compiled files');
     while (compiled.length) {
       batches.push(compiled.splice(0, 500));
     }
