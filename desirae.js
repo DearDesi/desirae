@@ -270,7 +270,7 @@
   };
 
   Desi.init = function (desi, env) {
-    Desi._initFileAdapter();
+    Desi._initFileAdapter(env);
 
     if (!exports.window) {
       // TODO pull state out of this later
