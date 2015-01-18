@@ -270,7 +270,7 @@
   };
 
   Desi.init = function (desi, env) {
-    console.info('getting config, data, caches...');
+    Desi._initFileAdapter();
 
     if (!exports.window) {
       // TODO pull state out of this later
@@ -281,9 +281,6 @@
       var arr = plop[0]
         //, blogdir = plop[1]
         ; 
-
-      console.info('loaded config, data, caches, partials');
-      /* console.log({ config:   arr.config , site:     arr.site , authors:  arr.authors }); */
 
       //desi.blogdir = blogdir;
       desi.originals = {};
@@ -350,8 +347,6 @@
       , Desi.fsapi.getCache()
       ]);
     }).then(function (things) {
-      console.info('loaded theme meta, root meta, collection meta');
-      /* console.log({ theme:      things[0] , root:       things[1] , collection: things[2] , asset:      things[3] , cache:      things[4] }); */
 
       function noErrors(map) {
         Object.keys(map).forEach(function (path) {
@@ -395,7 +390,6 @@
         console.error('Missing Collections!');
       }
 
-      console.info('last update: ' + (cache && cache.lastUpdate && new Date(cache.lastUpdate) || 'never'));
       desi.cache = cache;
       desi.meta = {
         themes: themes
