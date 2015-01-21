@@ -850,7 +850,16 @@
         view.contents = mustached;
 
         // shallowClone to prevent perfect object equality (and potential template caching)
+        view.entity.original_base_path = view.entity.base_path;
+        view.entity.home_path = view.entity.base_path + '/index.html';
+        env.original_base_path = env.base_path;
+        if (env.explicitIndexes) {
+          view.entity.base_path = view.entity.base_path + '/index.html';
+          env.base_path = env.base_path + '/index.html';
+        }
         newview = datamap(view);
+        env.base_path = env.original_base_path;
+        view.entity.base_path = view.entity.original_base_path;
         mustached = Mustache.render(html, newview, desi.partials);
 
         return mustached;
@@ -870,6 +879,9 @@
     var compiled = []
       ;
 
+    if (/dropbox/.test(env.base_url)) {
+      env.explicitIndexes = true;
+    }
     env.transforms = env.transforms || [];
     desi.transforms = (desi.transforms || []).concat(env.transforms);
     desi.transforms.push(function (view) {
@@ -907,13 +919,24 @@
       var navigation = JSON.parse(JSON.stringify(desi.navigation))
         , author = desi.authors[entity.yml.author] || desi.authors[Object.keys(desi.authors)[0]]
         , view
+        , themename = entity.yml.theme || desi.site.theme
         ;
 
       // TODO still have some index.html mess to work out...
-      entity.url            = env.base_url + path.join(env.base_path, entity.yml.permalink).replace(/\/index.html$/, '/');
-      entity.canonical_url  = env.base_url + path.join(env.base_path, entity.yml.permalink).replace(/\/index.html$/, '/');
-      entity.production_url = desi.site.base_url + path.join(desi.site.base_path, entity.yml.permalink).replace(/\/index.html$/, '/');
-      entity.relative_url   = path.join(env.base_path, entity.yml.permalink).replace(/\/index.html$/, '/');
+      entity.file_url       = env.base_url + path.join(env.base_path, entity.yml.permalink).replace(/\/$/, '/index.html');
+
+      if (env.explicitIndexes) {
+        // pretty much just dropbox and very strict apache configs
+        entity.url            = env.base_url + path.join(env.base_path, entity.yml.permalink).replace(/\/$/, '/index.html');
+        entity.canonical_url  = env.base_url + path.join(env.base_path, entity.yml.permalink).replace(/\/$/, '/index.html');
+        entity.production_url = desi.site.base_url + path.join(desi.site.base_path, entity.yml.permalink).replace(/\/$/, '/index.html');
+        entity.relative_url   = path.join(env.base_path, entity.yml.permalink).replace(/\/$/, '/index.html');
+      } else {
+        entity.url            = env.base_url + path.join(env.base_path, entity.yml.permalink).replace(/\/index.html$/, '/');
+        entity.canonical_url  = env.base_url + path.join(env.base_path, entity.yml.permalink).replace(/\/index.html$/, '/');
+        entity.production_url = desi.site.base_url + path.join(desi.site.base_path, entity.yml.permalink).replace(/\/index.html$/, '/');
+        entity.relative_url   = path.join(env.base_path, entity.yml.permalink).replace(/\/index.html$/, '/');
+      }
 
       // TODO nested names?
       navigation.forEach(function (nav) {
@@ -923,6 +946,10 @@
         // path.basename(nav.path, path.extname(nav.path))
         if (nav.href.replace(/(\/)?(\/index)?(\.html)?$/i, '') === entity.relative_url.replace(/(\/)?(\/index)?(\.html)?$/i, '')) {
           nav.active = true;
+        }
+        if (env.explicitIndexes) {
+          nav.href = nav.href + '/index.html';
+          nav.path = nav.path + '/index.html';
         }
       });
 
@@ -939,11 +966,17 @@
       , author: num2str(author)
       };
 
+      desi.allStyles = desi.styles;
+      desi.styles = desi.styles.filter(function (str) {
+        // TODO better matching
+        return str.match('/' + themename + '/');
+      });
       desi.transforms.forEach(function (fn) {
         view = fn(view);
       });
 
       return renderLayers(desi, env, view, entity).then(function (html) {
+        desi.styles = desi.allStyles;
         // NOTE: by now, all permalinks should be in the format /path/to/page.html or /path/to/page/index.html
         if (/^(index)?(\/?index.html)?$/.test(entity.yml.permalink)) {
           console.info('found compiled index');
