@@ -265,7 +265,7 @@
       ;
 
     if (!themename) {
-      themename = desi.site.theme;
+      themename = desi.site.theme || desi.config.theme;
     }
 
     // TODO NO DEFAULTS
@@ -824,7 +824,7 @@
       ;
 
     // BUG XXX the entity doesn't get a datamap (though it probably doesn't need one)
-    layers = getLayout(desi, entity.yml.theme, entity.yml.layout, [entity]);
+    layers = getLayout(desi, entity.theme, entity.layout, [entity]);
 
     return forEachAsync(layers, function (current) {
       var body = (current.body || current.contents || '').trim()
@@ -897,7 +897,7 @@
       var navigation = JSON.parse(JSON.stringify(desi.navigation))
         , author = desi.authors[entity.yml.author] || desi.authors[Object.keys(desi.authors)[0]]
         , view
-        , themename = entity.yml.theme || desi.site.theme
+        , themename = entity.theme || desi.site.theme
         ;
 
       if (!author) {
