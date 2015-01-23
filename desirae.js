@@ -268,7 +268,7 @@
       themename = desi.site.theme;
     }
 
-    // defaults to ruhoh-twitter defaults
+    // TODO NO DEFAULTS
     if ('__page__' === layoutname) {
       layoutname = desi.config.themes[themename].pageLayout || 'page';
     } else if ('__post__' === layoutname) {
@@ -663,16 +663,15 @@
     desi.navigation = [];
 
     desi.content.root.forEach(function (entity) {
-      // XXX BUG TODO strip only strip _root so that nested nav will work as expected
-      var name = path.basename(entity.path, path.extname(entity.path))
+      var name = path.join(entity.relativePath, path.basename(entity.name, path.extname(entity.name)))
         , nindex
         ;
 
-      if (alwaysAdd && /^(_root\/)index(\.\w+)$/i.test(entity.path)) {
+      // The index should not show up in the automatic listing
+      if (alwaysAdd && 'index' === name) {
         return;
       }
 
-      //if (-1 === desi.data.navigation.indexOf(name) && 'index' !== name)
       nindex = (desi.site.navigation).indexOf(name);
       if (!alwaysAdd && -1 === nindex) {
         return;
@@ -680,6 +679,7 @@
         nindex = desi.navigation.length;
       }
 
+      // TODO this happens before normalization... should fix that...
       desi.navigation[nindex] = {
         title: entity.yml && entity.yml.title || Desi.firstCap(name)
       , name: name
@@ -920,19 +920,24 @@
 
       // TODO nested names?
       navigation.forEach(function (nav) {
+        // TODO allow permalink
         nav.href = path.join(env.base_path, nav.name);
-        nav.path = path.join(env.base_path, nav.name);
 
-        // path.basename(nav.path, path.extname(nav.path))
-        //console.log('!!! entity', entity);
+        if (!/\.x?html?$/.test(nav.href)) {
+          // add trailing slash
+          nav.href += '/'; 
+        }
+
         if (nav.href.replace(/(\/)?(\/index)?(\.html)?$/i, '')
             === entity.relative_url.replace(/(\/)?(\/index)?(\.html)?$/i, '')) {
           nav.active = true;
         }
-        if (env.explicitIndexes) {
-          nav.href = nav.href + '/index.html';
-          nav.path = nav.path + '/index.html';
+
+        if (env.explicitIndexes && !/\.x?html?$/.test(nav.href)) {
+          nav.href = path.join(nav.href, 'index.html');
         }
+
+        nav.path = nav.href;
       });
 
       view = {
