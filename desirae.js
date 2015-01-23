@@ -880,15 +880,20 @@
     }
     */
     function compileThemeEntity(entity, i, arr) {
+      var view
+        ;
+
       console.info("[themes] compiling " + (i + 1) + "/" + arr.length + " " + entity.path);
-      // TODO less / sass / etc
-      compiled.push({ contents: entity.body || entity.contents, path: path.join(entity.path) });
-      if (/stylesheets.*\.css/.test(entity.path) && (!/google/.test(entity.path) || /obsid/.test(entity.path))) {
-        // TODO XXX move to a partial
-        desi.styles.push(
-          '<link href="' + path.join(env.base_path, entity.path) + '" type="text/css" rel="stylesheet" media="all">'
-        );
-      }
+      // TODO generate per-page for a more full 'view' object?
+      view = {  entity: { collectionType: 'themes' }, url: path.join(env.base_path, entity.path) };
+      // TODO this is more 'preprocessing' than 'rendering', perse
+      return Desi.render(entity.ext, entity.body || entity.contents, view).then(function (css) {
+        compiled.push({ contents: css, path: entity.path });
+        // TODO read theme config
+        if (/stylesheets.*\.css/.test(entity.path) && (!/google/.test(entity.path) || /obsid/.test(entity.path))) {
+          desi.styles.push(Mustache.render(desi.partials.stylesheet_link, view));
+        }
+      });
     }
 
     function compileContentEntity(entity, i, arr) {
@@ -964,8 +969,8 @@
           console.info("[index] compiling " + (entity.path || entity.name));
           compiled.push({ contents: html, path: path.join('index.html') });
         } else {
-          console.info("[collection] compiling " + entity.path, entity.relative_file);
-          compiled.push({ contents: html, path: path.join(entity.relative_file) });
+          //console.info("[collection] compiling " + entity.path, entity.relative_file);
+          compiled.push({ contents: html, path: path.join(entity.relative_file.replace(env.base_path, '')) });
         }
 
         if (/\/index.html$/.test(entity.permalink)) {
