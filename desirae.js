@@ -703,7 +703,6 @@
         var collection
           ;
 
-        //console.log('entity.collection', entity.collection);
         if ('root' === type) {
           // TODO 'no magic', 'defaults in the app, not the lib'
           collection = { permalink: '/:filename/' };
@@ -711,8 +710,6 @@
           collection = desi.config[type][entity.collection];
         }
 
-        //console.log('type');
-        //console.log(type);
         Desi._transformers[type].forEach(function (obj) {
           try {
             obj.transform(desi, env, collection, entity, i, entities);
@@ -849,8 +846,8 @@
         view.entity.home_path = view.entity.base_path + '/index.html';
         env.original_base_path = env.base_path;
         if (env.explicitIndexes) {
-          view.entity.base_path = view.entity.base_path + '/index.html';
-          env.base_path = env.base_path + '/index.html';
+          view.entity.base_path = path.join(view.entity.base_path, 'index.html');
+          env.base_path = path.join(env.base_path, 'index.html');
         }
         newview = datamap(view);
         env.base_path = env.original_base_path;
@@ -967,24 +964,23 @@
           console.info("[index] compiling " + (entity.path || entity.name));
           compiled.push({ contents: html, path: path.join('index.html') });
         } else {
-          console.info("[non-index] compiling " + entity.path, entity.relative_file);
+          console.info("[collection] compiling " + entity.path, entity.relative_file);
           compiled.push({ contents: html, path: path.join(entity.relative_file) });
         }
 
-        entity.yml.redirects = entity.yml.redirects || [];
-
         if (/\/index.html$/.test(entity.permalink)) {
-          entity.yml.redirects.push(entity.permalink.replace(/\/index.html$/, '.html'));
+          entity.redirects.push(entity.permalink.replace(/\/index.html$/, '.html'));
         } else if (/\.html$/.test(entity.permalink)) {
-          entity.yml.redirects.push(entity.permalink.replace(/\.html?$/, '/index.html'));
+          entity.redirects.push(entity.permalink.replace(/\.html?$/, '/index.html'));
         } else {
           // found index, ignoring redirect
         }
 
+        // TODO why are redirects broken?
         var redirectHtml = Mustache.render(desi.partials.redirect, view)
           ;
 
-        entity.yml.redirects.forEach(function (redirect) {
+        entity.redirects.forEach(function (redirect) {
 
           compiled.push({
             contents: redirectHtml
@@ -1088,7 +1084,9 @@
         size += saved.size;
 
         if (saved.error) {
+          console.error('[ERROR] saving fsapi batch at root');
           console.error(saved.error);
+          throw new Error(saved.error);
         }
 
         if (!saved.errors || !saved.errors.length) {
@@ -1096,7 +1094,9 @@
         }
 
         saved.errors.forEach(function (e) {
+          console.error('[ERROR] saving fsapi batch');
           console.error(e);
+          throw new Error(e);
         });
       });
     }).then(function () {
