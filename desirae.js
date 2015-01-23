@@ -5,11 +5,11 @@
     , path          = exports.path          || require('path')
     , Mustache      = exports.Mustache      || require('mustache')
     , forEachAsync  = exports.forEachAsync  || require('foreachasync').forEachAsync
-    , months
     , THEME_PREFIX  = 'themes'
     //, sha1sum       = exports.sha1sum       || require('./lib/node-adaptors').sha1sum
     //, safeResolve   = exports.safeResolve   || require('./lib/utils').safeResolve
     //, UUID          = exports.uuid          || require('node-uuid')
+    , pforms
     ;
 
   function Desi() {
@@ -26,84 +26,159 @@
     require('./lib/frontmatter').create(Desi);
   }
 
-  months = {
-    1: 'January'
-  , 2: 'February'
-  , 3: 'March'
-  , 4: 'April'
-  , 5: 'May'
-  , 6: 'June'
-  , 7: 'July'
-  , 8: 'August'
-  , 9: 'September'
-  , 10: 'October'
-  , 11: 'November'
-  , 12: 'December'
+  Desi.slugify = function (title) {
+    return title.toLowerCase()
+      .replace(/["']/g, '')
+      .replace(/\W/g, '-')
+      .replace(/^-+/g, '')
+      .replace(/-+$/g, '')
+      .replace(/--/g, '-')
+      ;
   };
 
-  /*
-  function shallowClone(obj) {
-    var shallow = {}
+  Desi.slugifyPath = function (filepath) {
+    // because not all filepaths are url-safe
+    return filepath.toLowerCase()
+      .replace(/\//g, '___SLASH___')
+      .replace(/["']/g, '')
+      .replace(/\W/g, '-')
+      .replace(/^-+/g, '')
+      .replace(/-+$/g, '')
+      .replace(/--/g, '-')
+      .replace(/___SLASH___/g, '/')
       ;
+  };
 
-    Object.keys(obj).forEach(function (key) {
-      shallow[key] = obj[key];
-    });
-
-    return shallow;
-  }
-  */
-
-  function firstCap(str) {
-    return str.replace(/^./, function ($1) { return $1.toUpperCase(); });
-  }
-
-  function pad(str) {
+  Desi.pad = function (str, n, c) {
+    c = c || '0';
+    if (0 !== n && !n) {
+      n = 2;
+    }
     str = str.toString();
+
     if (str.length < 2) {
-      return '0' + str;
+      return c + str;
     }
 
     return str;
-  }
+  };
 
-  function fromLocaleDate(str) {
-    // handles ISO and ISO-ish dates
-    var m = str.match(/(\d\d\d\d)-(\d{1,2})-(\d{1,2})([T\s](\d{1,2}):(\d{1,2})(:(\d{1,2}))?)?/)
-      ;
-
-    if (!m) {
-      return [];
-    }
-
-    m.year   = m[1];
-    m.month  = m[2];
-    m.day    = m[3];
-
-    m.hour   = m[4] = pad(m[5] || '00');  // hours
-    m.minute = m[5] = pad(m[6] || '00');  // minutes
-    m.second = m[6] = pad(m[8] || '00');  // seconds
- 
-    if (m[4] > 12) {
-      m.twelve_hour = m[7] = m[4] - 12;   // 12-hour
-      m.meridian    = m[8] = 'pm';        // am/pm
-    } else {
-      m.twelve_hour = m[7] = m[4]; 
-      m.meridian    = m[8] = 'am';
-    }
-
-    return m;
-  }
+  Desi.firstCap = function (str) {
+    return str.replace(/^./, function ($1) { return $1.toUpperCase(); });
+  };
 
   // See https://github.com/janl/mustache.js/issues/415
-  function num2str(obj) {
+  Desi.num2str = function (obj) {
     return JSON.parse(JSON.stringify(obj, function (key, val) {
       if ('number' === typeof val) {
         val = val.toString();
       }
       return val;
     }));
-  }
+  };
+
+  pforms = {
+    year:           function (entity) {
+                      return entity.year;
+                    }
+  , month:          function (entity) {
+                      return Desi.pad(entity.month, 2);
+                    }
+  , day:            function (entity) {
+                      return Desi.pad(entity.day, 2);
+                    }
+  , path:           function (entity) {
+                      return entity.relativePath
+                        .toLowerCase()
+                        .replace(/^\//, '')
+                        ;
+                    }
+  , relative_path:  function (entity) {
+                      // TODO slug the path in desirae proper?
+                      // TODO remove collection from start of path instead
+                      // of blindly assuming one directory at start of path
+                      // entity.collection.name
+                      return entity.relativePath
+                        .toLowerCase()
+                        .replace(/^\/?[^\/]+\//, '')
+                        ;
+                    }
+  , filename:       function (entity) {
+                      // don't put .html
+                      return entity.name
+                        .toLowerCase()
+                        .replace(/\.\w+$/, '')
+                        ;
+                    }
+  , slug:           function (entity) {
+                      // alias of title
+                      return entity.slug;
+                    }
+  , title:          function (entity) {
+                      return entity.slug;
+                    }
+  , name:           function (entity) {
+                      // alias of title
+                      return entity.slug;
+                    }
+  , collection:     function (entity) {
+                      // TODO implement in desirae
+                      return entity.collection && entity.collection.name
+                        || entity.collectionname
+                        || entity.collection
+                        || ''
+                        ;
+                    }
+  , categories:     function (entity) {
+                      return (entity.categories)[0]||'';
+                    }
+  , i_month:        function (entity) {
+                      return parseInt(entity.month, 10) || 0;
+                    }
+  , i_day:          function (entity) {
+                      return parseInt(entity.day, 10) || 0;
+                    }
+  };
+
+  Desi.permalinkify = function (desi, purl, entity) {
+    var parts = purl.split('/')
+      ;
+      
+    // when created from the web or cmd the file doesn't yet exist
+    if (!entity.name) {
+      entity.name = entity.slug + '.html';
+    }
+    if (!entity.relativePath) {
+      entity.relativePath = entity.collection || Object.keys(desi.config.collections)[0] || 'posts';
+    }
+
+    parts.forEach(function (part, i) {
+      var re = /:(\w+)/g
+        , m
+          // needs to be a copy, not a reference
+        , opart = part.toString()
+        ;
+
+      /* jshint -W084 */
+      while (null !== (m = re.exec(opart))) {
+        if (pforms[m[1]]) {
+          part = part.replace(':' + m[1], pforms[m[1]](entity));
+        }
+      }
+      /* jshint +W084 */
+
+      parts[i] = part || '';
+    });
+
+    parts.unshift('/');
+    purl = path.join.apply(null, parts);
+    if (!/(\/|\.html?)$/.test(purl)) {
+      // we just default to a slash if you were ambiguous
+      purl += '/';
+    }
+
+    return purl;
+  };
 
   function readFrontmatter(things) {
     return forEachAsync(things, function (file) {
@@ -117,13 +192,10 @@
       file.yml = parts.yml;
       file.frontmatter = parts.frontmatter;
       file.body = parts.body;
-
-      if (!parts.yml) {
-        console.warn("No frontmatter for " + (file.path || (file.relativePath + '/' + file.name)));
-      }
     });
   }
 
+  // TODO redo entirely
   function getDirty(cacheByPath, cacheBySha1, thingies, deps) {
     var byDirty = {}
       ;
@@ -242,22 +314,52 @@
     return getLayout(desi, themename, file.yml.layout, arr, i + 1);
   }
 
-  function clone(obj) {
-    return JSON.parse(JSON.stringify(obj));
-  }
+  /* function clone(obj) { return JSON.parse(JSON.stringify(obj)); } */
 
   Desi.YAML = {
     parse:      (exports.jsyaml || require('js-yaml')).load
   , stringify:  (exports.jsyaml || require('js-yaml')).dump
   };
 
-
-
   Desi.toDesiDate = Desi.toLocaleDate = function (d) {
-    return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate())
+    return d.getFullYear() + '-' + Desi.pad(d.getMonth() + 1) + '-' + Desi.pad(d.getDate())
       + ' '
-      + (d.getHours() % 12) + ':' + pad(d.getMinutes()) + ' ' + (d.getHours() - 12 >= 0 ? 'pm' : 'am')
+      + (d.getHours() % 12) + ':' + Desi.pad(d.getMinutes()) + ' ' + (d.getHours() - 12 >= 0 ? 'pm' : 'am')
       ;
+  };
+
+  Desi.fromLocaleDate = function (str) {
+    // handles ISO and ISO-ish dates
+    var m = str.match(/(\d\d\d\d)-(\d{1,2})-(\d{1,2})([T\s](\d{1,2}):(\d{1,2})(:(\d{1,2}))?)?/)
+      , d = {}
+      ;
+
+    if (!m) {
+      return [];
+    }
+
+    d.year   = m[1];
+    d.month  = m[2];
+    d.day    = m[3];
+
+    d.hour   = m[4] = Desi.pad(m[5] || '00');  // hours
+    d.minute = m[5] = Desi.pad(m[6] || '00');  // minutes
+    d.second = m[6] = Desi.pad(m[8] || '00');  // seconds
+ 
+    if (parseInt(m[4], 10) > 12) {
+      d.twelve_hour = m[7] = m[4] - 12;   // 12-hour
+      d.meridian    = m[8] = 'pm';        // am/pm
+    } else {
+      d.twelve_hour = m[7] = m[4]; 
+      d.meridian    = m[8] = 'am';
+    }
+
+    // 0 -> 12
+    if (!parseInt(d.twelve_hour, 10)) {
+      d.twelve_hour = '12';
+    }
+
+    return d;
   };
 
   // read config and such
@@ -276,24 +378,31 @@
       // TODO pull state out of this later
       Desi.realFsapi.create(Desi, env);
     }
+
     // config.yml, data.yml, site.yml, authors
-    return PromiseA.all([Desi.fsapi.getAllConfigFiles()/*, fsapi.getBlogdir()*/]).then(function (plop) {
+    return PromiseA.all([
+      Desi.fsapi.getAllConfigFiles()
+    /*, fsapi.getBlogdir()*/
+    ]).then(function (plop) {
       var arr = plop[0]
         //, blogdir = plop[1]
         ; 
 
       //desi.blogdir = blogdir;
-      desi.originals = {};
-      desi.copies = {};
+      //desi.originals = {};
+      //desi.copies = {};
 
       Object.keys(arr).forEach(function (key) {
-        desi.originals[key] = arr[key];
-        desi.copies[key]    = clone(arr[key]);
-        desi[key]           = clone(arr[key]);
+        desi[key] = arr[key];
+        //desi.originals[key] = arr[key];
+        //desi.copies[key]    = clone(arr[key]);
+        //desi[key]           = clone(arr[key]);
       });
 
       // TODO just walk all of ./*.yml authors, posts, themes, _root from the get-go
       desi.config.rootdir = desi.config.rootdir || '_root';
+      // TODO create a config linter as a separate module
+      /*
       if ('object' !== typeof desi.config.collections || !Object.keys(desi.config.collections).length) {
         desi.config.collections = { 'posts': {} };
       }
@@ -307,6 +416,7 @@
       if ('string' !== typeof desi.site.theme) {
         desi.site.theme = 'ruhoh-twitter';
       }
+      */
       if (!Array.isArray(desi.site.navigation) || !desi.site.navigation.length) {
         desi.site.navigation = []; // ['archive'];
       }
@@ -323,25 +433,25 @@
         Desi.fsapi.getMeta(
           themenames.map(function (n) { return path.join(THEME_PREFIX, n); })
         , { dotfiles: false 
-          , extensions: ['md', 'markdown', 'htm', 'html', 'jade', 'css', 'js', 'yml']
+          , extensions: Object.keys(Desi._exts.themes)
           }
         )
       , Desi.fsapi.getMeta(
           [desi.config.rootdir]
         , { dotfiles: false
-          , extensions: ['md', 'markdown', 'htm', 'html', 'jade']
+          , extensions: Object.keys(Desi._exts.collections)
           }
         )
       , Desi.fsapi.getMeta(
           collectionnames
         , { dotfiles: false
-          , extensions: ['md', 'markdown', 'htm', 'html', 'jade']
+          , extensions: Object.keys(Desi._exts.collections)
           }
         )
       , Desi.fsapi.getMeta(
           assetnames
         , { dotfiles: false 
-          //, extensions: ['md', 'markdown', 'htm', 'html', 'jade', 'css', 'js', 'yml']
+          //, extensions: Object.keys(Desi._exts.assets)
           }
         )
       , Desi.fsapi.getCache()
@@ -349,18 +459,28 @@
     }).then(function (things) {
 
       function noErrors(map) {
-        Object.keys(map).forEach(function (path) {
-          map[path] = map[path].filter(function (m) {
-            if (m.error) {
-              console.warn("Couldn't read '" + (m.path || m.name) + "'");
-              console.warn(m.error);
-              return false;
+        Object.keys(map).forEach(function (pathname) {
+          map[pathname] = map[pathname].filter(function (metaf) {
+            if (!metaf.relativePath) {
+              metaf.relativePath = path.dirname(metaf.path);
+              metaf.name = metaf.name || path.basename(metaf.path);
             }
 
-            if (!m.size) {
-              console.warn("Ignoring 0 byte file '" + (m.path || m.name) + "'");
-              console.warn(m.error);
-              return false;
+            metaf.path = path.join(metaf.relativePath, metaf.name);
+
+            
+            if (metaf.error) {
+              console.error("Couldn't read '" + metaf.path + "'");
+              console.error(metaf.error);
+              throw new Error(metaf.error);
+              //return false;
+            }
+
+            if (!metaf.size) {
+              console.error("Junk file (0 bytes) '" + metaf.path + "'");
+              console.error(metaf.error);
+              throw new Error(metaf.error);
+              //return false;
             }
 
             return true;
@@ -384,11 +504,15 @@
 
       if (!root.length) {
         console.error('Missing ROOT!');
+        throw new Error('It seems that your root directory is missing');
       }
 
+      /*
       if (!collections[Object.keys(collections)[0]].length) {
         console.error('Missing Collections!');
+        throw new Error('It seems that your collections are missing');
       }
+      */
 
       desi.cache = cache;
       desi.meta = {
@@ -403,7 +527,7 @@
     });
   };
 
-  Desi.getDirtyFiles = function (desi) {
+  Desi.getDirtyFiles = function (desi, env) {
     var cache = desi.cache
       //, config = desi.config
       , cacheByPath = {}
@@ -423,44 +547,70 @@
     droot = getDirty(cacheByPath, cacheBySha1, [desi.meta.root], dthemes);
     dfiles = getDirty(cacheByPath, cacheBySha1, desi.meta.collections, dthemes);
 
-    /*
-    if (!droot.length) {
-      console.error("no root files to get");
-    }
-    if (!dfiles.length) {
-      console.error("no content files to get");
-    }
-    if (!dthemes.length) {
-      console.error("no theme files to get");
-    }
-    if (!droot || !dfiles || !droot) {
-      throw new Error("didn't read files");
-    }
-    */
-    
     return PromiseA.all([
       Object.keys(droot).length ? Desi.fsapi.getContents(Object.keys(droot)) : PromiseA.resolve([])
     , Object.keys(dfiles).length ? Desi.fsapi.getContents(Object.keys(dfiles)) : PromiseA.resolve([])
     , Object.keys(dthemes).length ? Desi.fsapi.getContents(Object.keys(dthemes)) : PromiseA.resolve([])
     ]).then(function (arr) {
-      // TODO XXX display errors in html
-      function noErrors(o) {
-        if (!o.error) {
-          return true;
+      var result = { root: [], collections: [], themes: [] }
+        ;
+
+      function noErrors(collectionBase, arr, entity) {
+        // FOO FOO FOO
+        if (!entity.error) {
+          if (!entity.relativePath) {
+            entity.relativePath = path.dirname(entity.path);
+            entity.name = entity.name || path.basename(entity.path);
+          }
+
+          entity.relativePath = entity.relativePath.replace(desi.config.rootdir, '').replace(/^\//, '');
+          entity.path = path.join(entity.relativePath, entity.name);
+          entity.ext = path.extname(entity.path);
+
+          // TODO better collection detection
+          if ('root' === collectionBase) {
+            // TODO how to reconcile rootdir vs _root vs root?
+            entity.collection = 'root';
+            entity.collectionType = 'root';
+            // desi.config.rootdir;
+          }
+          else if ('collections' === collectionBase) {
+            entity.collection = entity.relativePath.split('/')[0];
+            entity.collectionType = 'collections';
+          }
+          else if ('themes' === collectionBase) {
+            entity.collection = entity.relativePath.split('/')[1];
+            entity.collectionType = 'themes';
+          }
+
+          arr.push(entity);
+          return PromiseA.resolve();
         }
 
-        console.warn("Couldn't get file contents for " + o.path);
-        console.warn(o.error);
+        if (env.onError) {
+          return env.onError(entity.error);
+        } else {
+          console.error("Couldn't get file contents for '" + entity.path + "'");
+          console.error(entity.error);
+          return PromiseA.reject(entity.error);
+        }
       }
 
-      // TODO also retrieve from cache?
-      desi.content = {
-        root: arr[0].filter(noErrors)
-      , collections: arr[1].filter(noErrors)
-      , themes: arr[2].filter(noErrors)
-      };
+      return forEachAsync(arr[0], function (o) {
+        return noErrors('root', result.root, o);
+      }).then(function () {
+        return forEachAsync(arr[1], function (o) {
+          return noErrors('collections', result.collections, o);
+        });
+      }).then(function () {
+        return forEachAsync(arr[2], function (o) {
+          return noErrors('themes', result.themes, o);
+        });
+      }).then(function () {
+        desi.content = result;
 
-      return desi;
+        return desi;
+      });
     });
   };  
 
@@ -468,14 +618,11 @@
     var files = {}
       ;
 
-    // copy assets -> easy!
-    // TODO check cache
     Object.keys(desi.meta.assets).forEach(function (key) {
       var assets = desi.meta.assets[key]
         ;
 
       assets.forEach(function (asset) {
-        console.log('preparing ' + asset.path + ' for copy');
         files[path.join(asset.relativePath, asset.name)] = path.join(env.compiled_path, 'assets', asset.relativePath, asset.name);
       });
     });
@@ -490,6 +637,7 @@
         console.error("Errors copying assets...");
         copied.errors.forEach(function (err) {
           console.error(err);
+          throw new Error(err);
         });
       }
 
@@ -514,13 +662,13 @@
     // TODO add missing metadata and resave file
     desi.navigation = [];
 
-    desi.content.root.forEach(function (page) {
+    desi.content.root.forEach(function (entity) {
       // XXX BUG TODO strip only strip _root so that nested nav will work as expected
-      var name = path.basename(page.path, path.extname(page.path))
+      var name = path.basename(entity.path, path.extname(entity.path))
         , nindex
         ;
 
-      if (alwaysAdd && /^(_root\/)index(\.\w+)$/i.test(page.path)) {
+      if (alwaysAdd && /^(_root\/)index(\.\w+)$/i.test(entity.path)) {
         return;
       }
 
@@ -533,7 +681,7 @@
       }
 
       desi.navigation[nindex] = {
-        title: page.yml && page.yml.title || firstCap(name)
+        title: entity.yml && entity.yml.title || Desi.firstCap(name)
       , name: name
       , active: false // placeholder
       };
@@ -547,205 +695,53 @@
     return PromiseA.resolve(desi);
   };
 
-  Desi.normalizeYml = function (desi) {
-    desi.content.root.forEach(function (page) {
-      page.yml = page.yml || {};
-      // TODO make default layout configurable
-      page.yml.layout = page.yml.layout || '__page__';
+  Desi.runTransforms = function (desi, env) {
+    desi.permalinks = desi.permalinks || {};
 
-      if (!page.relativePath) {
-        page.relativePath = path.dirname(page.path);
-        page.name = page.name || path.basename(page.path);
-      }
+    function makeTransformer(type) {
+      return function (entity, i, entities) {
+        var collection
+          ;
 
-      page.relativePath = page.relativePath.replace(desi.config.rootdir, '').replace(/^\//, '');
-      page.path = path.join(page.relativePath, page.name);
-
-      // TODO make bare root routes configurable
-      page.yml.permalink = page.yml.permalink || page.path.replace(/\.\w+$/, '');
-
-      page.yml.title = page.yml.title || firstCap(page.name.replace(/\.\w+$/, ''));
-    });
-
-    desi.content.collections = desi.content.collections.filter(function (article) {
-      if (!article.yml) {
-        console.warn("no frontmatter for " + article.name);
-        console.warn(article.name);
-        return;
-      }
-
-      if (!article.body || !article.body.trim()) {
-        console.warn('Ignoring empty content file ' + (article.path || article.name));
-        return;
-      }
-
-      return true;
-    });
-
-
-    function normalizeFrontmatter(page) {
-      var yml = page.yml
-        ;
-
-      // TODO read the config for this collection for how to create premalink
-      if (!yml.permalink) {
-        if (page.name) {
-          page.htmlname = page.name.replace(/\.\w+$/, '.html');
+        //console.log('entity.collection', entity.collection);
+        if ('root' === type) {
+          // TODO 'no magic', 'defaults in the app, not the lib'
+          collection = { permalink: '/:filename/' };
+        } else {
+          collection = desi.config[type][entity.collection];
         }
-        page.path = page.path || path.join(page.relativePath, page.name);
-        page.htmlpath = page.path.replace(/\.\w+$/, '.html');
-        // TODO strip '_root' or whatever
-        // strip .html, .md, .jade, etc
-        if (!/^\/?(index)?\/?index(\.html)?/.test(yml.htmlpath)) {
-          console.info('found index again');
-          yml.permalink = page.htmlpath;
-        }
-      }
 
-      if (!/\.html?$/.test(yml.permalink)) {
-        yml.permalink = path.join(yml.permalink, 'index.html');
-      }
-
-      //yml.permalinkBase = path.join(path.dirname(yml.permalink), path.basename(yml.permalink, path.extname(yml.permalink)));
-      //yml.permalink = path.join(path.dirname(yml.permalink), path.basename(yml.permalink, path.extname(yml.permalink)));
-
-      if (!page.yml.uuid) {
-        // TODO only do this if it's going to be saved
-        // page.yml.uuid = UUID.v4();
-      }
-
-      if (!page.yml.date) {
-        // TODO tell YAML parser to keep the date a string
-        page.yml.date = new Date(page.yml.created_at || page.yml.time || page.yml.updated_at || page.createdDate || page.lastModifiedDate).toISOString();
-      }
-      if ('object' === typeof page.yml.date) {
-        page.yml.date = page.yml.date.toISOString();
-      }
-
-      if (!page.yml.updated_at) {
-        page.yml.updated_at = page.lastModifiedDate;
-      }
+        //console.log('type');
+        //console.log(type);
+        Desi._transformers[type].forEach(function (obj) {
+          try {
+            obj.transform(desi, env, collection, entity, i, entities);
+          } catch(e) {
+            console.error('[ERROR]');
+            console.error("Transform " + obj.name + " failed on " + entity.path);
+            console.error(e.message);
+            throw e;
+          }
+        });
+      };
     }
 
-    function normalizeContentEntity(entity) {
-      entity.ext            = path.extname(entity.path);
-      entity.published_at   = fromLocaleDate(entity.yml.date);
-      entity.year           = entity.published_at.year;
-      entity.month          = entity.published_at.month;
-      entity.day            = entity.published_at.day;
-      entity.hour           = entity.published_at.hour;
-      entity.twelve_hour    = entity.published_at.twelve_hour;
-      entity.meridian       = entity.published_at.meridian;
-      entity.minute         = entity.published_at.minute;
-      entity.title          = entity.yml.title;
-      // let's just agree that that's too far
-      //entity.second = entity.published_at.second;
-
-      // The root index is the one exception
-      if (/^(index)?\/?index(\.html?)?$/.test(entity.yml.permalink)) {
-        entity.yml.permalink = '';
-        console.info('found index', entity);
-      }
-    }
-
-    desi.content.root.forEach(normalizeFrontmatter);
-    // TODO process tags and categories and such
-    desi.content.collections.forEach(normalizeFrontmatter);
-
-    desi.content.root.forEach(normalizeContentEntity);
-    desi.content.collections.forEach(normalizeContentEntity);
+    desi.content.root.forEach(makeTransformer('root'));
+    desi.content.collections.forEach(makeTransformer('collections'));
 
     return PromiseA.resolve(desi);
   };
 
-  Desi.collate = function (desi, env/*, collectionname*/) {
-    function byDate(a, b) {
-      if (a.year > b.year) {
-        return -1;
-      } else if (a.year < b.year) {
-        return 1;
-      }
-
-      if (a.month > b.month) {
-        return -1;
-      } else if (a.month < b.month) {
-        return 1;
-      }
-
-      if (a.day > b.day) {
-        return -1;
-      } else if (a.day < b.day) {
-        return 1;
-      }
-
-      if (a.hour > b.hour) {
-        return -1;
-      } else if (a.hour < b.hour) {
-        return 1;
-      }
-
-      if (a.minute > b.minute) {
-        return -1;
-      } else if (a.minute < b.minute) {
-        return 1;
-      }
-
-      if (a.title.toLowerCase() <= b.title.toLowerCase()) {
-        return -1;
-      }
-
-      return 1;
-    }
-
-    function collate(entities) {
-      var yearsArr = []
-        ;
-
-      entities.forEach(function (f) {
-        var set
-          , yindex = 3000 - f.year
-          , mindex = 12 - f.month
-          ;
-
-        f.url = path.join(env.base_path, f.yml.permalink);
-
-        if (!yearsArr[yindex]) {
-          yearsArr[yindex] = { year: f.year, months: [] };
-        }
-        set = yearsArr[yindex];
-
-        if (!set.months[mindex]) {
-          set.months[mindex] = { month: months[parseInt(f.month, 10)], pages: [] };
-        }
-        set = set.months[mindex];
-
-        set.pages.push(f);
-      });
-
-      yearsArr = yearsArr.filter(function (y) {
-        if (!y) {
-          return false;
-        }
-
-        y.months = y.months.filter(function (m) {
-          return m && m.pages.length;
-        });
-
-        if (!y.months.length) {
-          return false;
-        }
-
-        return true;
-      });
-
-      return { years: yearsArr };
-    }
-
-
-    desi.content.collections.sort(byDate);
-    desi.collated = collate(desi.content.collections);
-
-    return PromiseA.resolve(desi);
+  Desi._aggregations = [];
+  Desi.registerAggregator = function (fn) {
+    Desi._aggregations.push(fn);
+  };
+  Desi.runAggregations = function (desi, env/*, collectionname*/) {
+    return forEachAsync(Desi._aggregations, function (fn) {
+      return fn(desi, env);
+    }).then(function () {
+      return desi;
+    });
   };
 
   Desi._datamaps = {};
@@ -753,77 +749,77 @@
     if (!Desi._datamaps[name]) {
       Desi._datamaps[name] = fn;
     } else {
-      console.warn("ignoring additional data mapper for '"
+      throw new Error("cannot add additional data mapper for '"
         + name + "' (there's already one assigned)");
     }
   };
-  Desi.registerDataMapper('desirae@1.0', function (obj) {
-    obj.desi = obj;
-    return obj;
-  });
 
-  Desi.renderers = {};
+  Desi._transformers = { root: [], collections: [], assets: [], themes: [] };
+  Desi.registerTransform = function (name, fn, opts) {
+    ['root', 'collections', 'themes', 'assets'].forEach(function (thingname) {
+      if (!opts[thingname]) {
+        return;
+      }
+
+      if (Desi._transformers[thingname].some(function (obj) {
+        if (name === obj.name || fn === obj.transform) {
+          return true;
+        }
+      })) {
+        throw new Error("cannot add additional transformer for '"
+          + name + "' (there's already one assigned)");
+      }
+
+      Desi._transformers[thingname].push({
+        name: name
+      , transform: fn
+      , root: opts.root
+      , assets: opts.assets
+      , themes: opts.themes
+      , collections: opts.collections
+      });
+    });
+  };
+
+  Desi._exts = { root: {}, collections: {}, assets: {}, themes: {} };
+
+  Desi._renderers = { root: {}, collections: {}, assets: {}, themes: {} };
   Desi.registerRenderer = function(ext, fn, opts) {
-    ext = ext.replace(/^\./, '');
-    // TODO allow a test method for ext and content (new RegExp("\\." + escapeRegExp(ext) + "$", i).test(current.ext))
     opts = opts || {};
-    // TODO opts.priority
-    Desi.renderers[ext] = Desi.renderers[ext] || [];
-    // LIFO
-    Desi.renderers[ext].unshift(fn);
+    if (!('root' in opts)) {
+      opts.root = true;
+    }
+    if (!('collections' in opts)) {
+      opts.collections = true;
+    }
+
+    ext = ext.replace(/^\./, '');
+
+    ['root', 'collections', 'themes', 'assets'].forEach(function (key) {
+      if (!opts[key]) {
+        return;
+      }
+
+      Desi._exts[key][ext] = true;
+
+      if (!Desi._renderers[key][ext]) {
+        Desi._renderers[key][ext] = [];
+      }
+      // LIFO
+      Desi._renderers[key][ext].unshift(fn);
+    });
   };
   Desi.render = function (ext, content, view) {
+    var type = view.entity.collectionType
+      ;
+
     ext = (ext||'').toLowerCase().replace(/^\./, '');
 
-    if (Desi.renderers[ext] && Desi.renderers[ext].length) {
-      return Desi.renderers[ext][0](content, view);
+    if (Desi._renderers[type][ext] && Desi._renderers[type][ext].length) {
+      return Desi._renderers[type][ext][0](content, view);
     }
-    return PromiseA.reject(new Error("no renderer registered for ." + ext));
+    return PromiseA.reject(new Error("no '" + type + "' renderer registered for '." + ext + "'"));
   };
-
-  function registerJade() {
-    var jade = true || exports.jade || require('jade')
-      ;
-
-    function render(contentstr/*, desi*/) {
-      return PromiseA.resolve(jade(contentstr));
-    }
-
-    if (false) {
-      Desi.registerRenderer('jade', render);
-    }
-  }
-  registerJade();
-
-  function registerMarkdown() {
-    var markitdown  = (exports.markdownit || require('markdown-it'))({ html: true, linkify: true })
-      ;
-
-    function render(contentstr/*, desi*/) {
-      return PromiseA.resolve(
-        markitdown.render(contentstr)
-          //.replace('&quot;', '"')
-          //.replace('&#39;', "'")
-          //.replace('&#x2F;', '/')
-      );
-    }
-
-    ['md', 'markdown', 'mdown', 'mkdn', 'mkd', 'mdwn', 'mdtxt', 'mdtext'].forEach(function (ext) {
-      Desi.registerRenderer(ext, render);
-    });
-  }
-  registerMarkdown();
-
-  function registerHtml() {
-    function render(contentstr/*, desi*/) {
-      return PromiseA.resolve(contentstr);
-    }
-
-    Desi.registerRenderer('html', render);
-    Desi.registerRenderer('htm', render);
-    Desi.registerRenderer('xhtml', render);
-  }
-  registerHtml();
 
   function renderLayers(desi, env, view, entity) {
     var mustached = ''
@@ -837,13 +833,12 @@
       var body = (current.body || current.contents || '').trim()
         ;
 
-      // TODO move to normalization
-      current.path = current.path || (entity.relativePath + '/' + entity.name);
-
-
       return Desi.render(current.ext, body, view).then(function (html) {
         // TODO organize datamap inheritence
-        var datamap = Desi._datamaps[current.config && current.datamap] || Desi._datamaps[env.datamap] || Desi._datamaps[entity.datamap] || Desi._datamaps['ruhoh@2.6']
+        var datamap = Desi._datamaps[current.config && current.datamap]
+              || Desi._datamaps[env.datamap] 
+              || Desi._datamaps[entity.datamap]
+              || Desi._datamaps['ruhoh@2.6']
           , newview
           ;
 
@@ -882,27 +877,13 @@
     if (/dropbox/.test(env.base_url)) {
       env.explicitIndexes = true;
     }
-    env.transforms = env.transforms || [];
-    desi.transforms = (desi.transforms || []).concat(env.transforms);
-    desi.transforms.push(function (view) {
-      var yml = view.entity.yml
-        ;
-
-      if (yml.uuid) {
-        view.entity.disqus_identifier = yml.uuid;
-      } else {
-        view.entity.disqus_url = view.entity.production_url;
-      }
-
-      return view;
-    });
 
     /*
     function compileScriptEntity(entity, i, arr) {
     }
     */
     function compileThemeEntity(entity, i, arr) {
-      console.log("compiling " + (i + 1) + "/" + arr.length + " " + (entity.path || entity.name));
+      console.info("[themes] compiling " + (i + 1) + "/" + arr.length + " " + entity.path);
       // TODO less / sass / etc
       compiled.push({ contents: entity.body || entity.contents, path: path.join(entity.path) });
       if (/stylesheets.*\.css/.test(entity.path) && (!/google/.test(entity.path) || /obsid/.test(entity.path))) {
@@ -914,7 +895,7 @@
     }
 
     function compileContentEntity(entity, i, arr) {
-      console.log("compiling " + (i + 1) + "/" + arr.length + " " + entity.path);
+      console.info("compiling " + (i + 1) + "/" + arr.length + " " + entity.path);
 
       var navigation = JSON.parse(JSON.stringify(desi.navigation))
         , author = desi.authors[entity.yml.author] || desi.authors[Object.keys(desi.authors)[0]]
@@ -922,20 +903,19 @@
         , themename = entity.yml.theme || desi.site.theme
         ;
 
-      // TODO still have some index.html mess to work out...
-      entity.file_url       = env.base_url + path.join(env.base_path, entity.yml.permalink).replace(/\/$/, '/index.html');
-
-      if (env.explicitIndexes) {
-        // pretty much just dropbox and very strict apache configs
-        entity.url            = env.base_url + path.join(env.base_path, entity.yml.permalink).replace(/\/$/, '/index.html');
-        entity.canonical_url  = env.base_url + path.join(env.base_path, entity.yml.permalink).replace(/\/$/, '/index.html');
-        entity.production_url = desi.site.base_url + path.join(desi.site.base_path, entity.yml.permalink).replace(/\/$/, '/index.html');
-        entity.relative_url   = path.join(env.base_path, entity.yml.permalink).replace(/\/$/, '/index.html');
-      } else {
-        entity.url            = env.base_url + path.join(env.base_path, entity.yml.permalink).replace(/\/index.html$/, '/');
-        entity.canonical_url  = env.base_url + path.join(env.base_path, entity.yml.permalink).replace(/\/index.html$/, '/');
-        entity.production_url = desi.site.base_url + path.join(desi.site.base_path, entity.yml.permalink).replace(/\/index.html$/, '/');
-        entity.relative_url   = path.join(env.base_path, entity.yml.permalink).replace(/\/index.html$/, '/');
+      if (!author) {
+        console.error("\n\n\n");
+        console.error("You don't have any files in authors/*.yml");
+        console.error("Please create authors/your-name.yml and fill it out");
+        console.error("For example:");
+        console.error("\n");
+        console.error("name: John Doe");
+        console.error("bio: One cool dude.");
+        console.error("email: john.doe@email.com");
+        console.error("website: http://john.example.com");
+        console.error("facebook: http://fb.com/john.doe");
+        console.error("\n\n\n");
+        throw new Error("author file not found");
       }
 
       // TODO nested names?
@@ -944,7 +924,9 @@
         nav.path = path.join(env.base_path, nav.name);
 
         // path.basename(nav.path, path.extname(nav.path))
-        if (nav.href.replace(/(\/)?(\/index)?(\.html)?$/i, '') === entity.relative_url.replace(/(\/)?(\/index)?(\.html)?$/i, '')) {
+        //console.log('!!! entity', entity);
+        if (nav.href.replace(/(\/)?(\/index)?(\.html)?$/i, '')
+            === entity.relative_url.replace(/(\/)?(\/index)?(\.html)?$/i, '')) {
           nav.active = true;
         }
         if (env.explicitIndexes) {
@@ -963,7 +945,7 @@
       , entities: arr
       , desi: desi
       , navigation: navigation
-      , author: num2str(author)
+      , author: Desi.num2str(author)
       };
 
       desi.allStyles = desi.styles;
@@ -971,28 +953,27 @@
         // TODO better matching
         return str.match('/' + themename + '/');
       });
-      desi.transforms.forEach(function (fn) {
-        view = fn(view);
-      });
 
       return renderLayers(desi, env, view, entity).then(function (html) {
         desi.styles = desi.allStyles;
-        // NOTE: by now, all permalinks should be in the format /path/to/page.html or /path/to/page/index.html
-        if (/^(index)?(\/?index.html)?$/.test(entity.yml.permalink)) {
-          console.info('found compiled index');
+        // NOTE: by now, all permalinks should be in the format
+        // /path/to/page.html or /path/to/page/index.html
+        if (/^(index)?(\/?index.html)?$/.test(entity.permalink)) {
+          console.info("[index] compiling " + (entity.path || entity.name));
           compiled.push({ contents: html, path: path.join('index.html') });
         } else {
-          compiled.push({ contents: html, path: path.join(entity.yml.permalink) });
+          console.info("[non-index] compiling " + entity.path, entity.relative_file);
+          compiled.push({ contents: html, path: path.join(entity.relative_file) });
         }
 
         entity.yml.redirects = entity.yml.redirects || [];
 
-        if (/\/index.html$/.test(entity.yml.permalink)) {
-          entity.yml.redirects.push(entity.yml.permalink.replace(/\/index.html$/, '.html'));
-        } else if (/\.html$/.test(entity.yml.permalink)) {
-          entity.yml.redirects.push(entity.yml.permalink.replace(/\.html?$/, '/index.html'));
+        if (/\/index.html$/.test(entity.permalink)) {
+          entity.yml.redirects.push(entity.permalink.replace(/\/index.html$/, '.html'));
+        } else if (/\.html$/.test(entity.permalink)) {
+          entity.yml.redirects.push(entity.permalink.replace(/\.html?$/, '/index.html'));
         } else {
-          console.info('found index, ignoring redirect');
+          // found index, ignoring redirect
         }
 
         var redirectHtml = Mustache.render(desi.partials.redirect, view)
@@ -1049,12 +1030,14 @@
   };
 
   Desi.buildAll = function (desi, env) {
-    return Desi.getDirtyFiles(desi, env.since)
+    return Desi.getDirtyFiles(desi, env)
       .then(Desi.parseFrontmatter)
       .then(Desi.getNav)
-      .then(Desi.normalizeYml)
       .then(function () {
-        Desi.collate(desi, env);
+        return Desi.runTransforms(desi, env);
+      })
+      .then(function () {
+        return Desi.runAggregations(desi, env);
       })
       .then(function () {
         return Desi.build(desi, env);
@@ -1080,7 +1063,6 @@
       ;
 
     if (!compiled.length) {
-      console.info("No files were deemed worthy to compile. Done");
       return;
     }
 
@@ -1090,15 +1072,14 @@
 
     // because some servers / proxies are terrible at handling large uploads (>= 100k)
     // (vagrant? or express? one of the two is CRAZY slow)
-    console.info('saving compiled files');
     while (compiled.length) {
       batches.push(compiled.splice(0, 500));
     }
 
     now = Date.now();
-    console.info('compiled files');
     return forEachAsync(batches, function (files) {
       return Desi.fsapi.putFiles(files).then(function (saved) {
+        // TODO reduce from files
         size += saved.size;
 
         if (saved.error) {
@@ -1112,18 +1093,16 @@
         saved.errors.forEach(function (e) {
           console.error(e);
         });
-        //console.info('saved ' + files.length + ' files');
-        //console.log(saved);
       });
     }).then(function () {
-      // TODO update cache
-      console.info('wrote ' + desi.compiled.length 
-        + ' files (' + (size / (1024 * 1024)).toFixed(2)
-        + ' MiB) in '
-        + ((Date.now() - now) / 1000).toFixed(3) + 's'
-      );
+      return {
+        numFiles: desi.compiled.length
+      , size: size
+      , start: now
+      , end: Date.now()
+      };
     });
   };
 
-  exports.Desirae = exports.Desi = Desi.Desirae = Desi.Desi = Desi;
+  exports.Desirae = Desi.Desirae = Desi;
 }('undefined' !== typeof exports && exports || window));
