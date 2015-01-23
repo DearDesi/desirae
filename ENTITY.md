@@ -54,3 +54,9 @@ production_url    : http://example.com/posts/foo/
 ```
 
 Note: The option `env.explicitIndexes` turns on `/index.html`. This option is automatically turned on when Dropbox is the host.
+
+TODO
+----
+
+* path relative from / in the browser
+* path relative from base_path on the file system
