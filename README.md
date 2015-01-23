@@ -79,8 +79,81 @@ var desi = {}
 
 After that you'll load any plugins you need.
 
+Here's how you would load all of the common plugins:
+
 ```javascript
-Desi.registerDataMapper('ruhoh', window.DesiraeDatamapRuhoh || require('desirae-datamap-ruhoh').DesiraeDatamapRuhoh);
+// load the module whether in browser or node
+function dload(filename, exportname) {
+  return dload('undefined' !== typeof window && window[exportname] || require(filename)[exportname];
+}
+//
+// 1. Transform (yml, slug, etc)
+//
+Desi.registerTransform(
+  'lint'
+, dload('desirae/lib/transform-core', 'DesiraeTransformCore').lint
+, { collections: true }
+);
+Desi.registerTransform(
+  'root'
+, dload('desirae/lib/transform-core', 'DesiraeTransformCore').root
+, { root: true }
+);
+Desi.registerTransform(
+  'normalize'
+, dload('desirae/lib/transform-core', 'DesiraeTransformCore').normalize
+, { root: true, collections: true }
+);
+Desi.registerTransform(
+  'disqus'
+, dload('desirae/lib/transform-core', 'DesiraeTransformCore').disqus
+, { collections: true }
+);
+
+//
+// 2. Register Aggregators (rss, categories, tags, etc)
+//
+Desi.registerAggregator(dload('desirae/lib/aggregate-core', 'DesiraeAggregateCore').collate);
+
+//
+// 3. Register Datamappers (ruhoh, desirae, jade, mustache, liquid)
+//
+Desi.registerDataMapper('desirae', dload('desirae/lib/datamap-core', 'DesiraeDatamapCore'));
+Desi.registerDataMapper('desirae@1.0', dload('desirae/lib/datamap-core', 'DesiraeDatamapCore'));
+Desi.registerDataMapper('ruhoh', dload('desirae-datamap-ruhoh', 'DesiraeDatamapRuhoh'));
+Desi.registerDataMapper('ruhoh@1.0', dload('desirae-datamap-ruhoh', 'DesiraeDatamapRuhoh'));
+Desi.registerDataMapper('ruhoh@2.6', dload('desirae-datamap-ruhoh', 'DesiraeDatamapRuhoh'));
+
+//
+// 4. Register Renderers (md -> html, less -> css, etc)
+//
+Desi.registerRenderer(
+  'js'
+, dload('desirae/lib/render-core', 'DesiraeRenderJs')
+, { themes: true, assets: true }
+);
+Desi.registerRenderer(
+  'css'
+, dload('desirae/lib/render-core', 'DesiraeRenderCss')
+, { themes: true, assets: true }
+);
+Desi.registerRenderer(
+  'html'
+, dload('desirae/lib/render-core', 'DesiraeRenderHtml')
+, { root: true, collections: true, themes: true, assets: true }
+);
+['md', 'markdown'].forEach(function (ext) {
+  Desi.registerRenderer(
+    ext
+  , dload('desirae/lib/render-core', 'DesiraeRenderMarkdown')
+  , { root: true, collections: true }
+  );
+});
+Desi.registerRenderer(
+  'jade'
+, dload('desirae/lib/render-core', 'DesiraeRenderJade')
+, { root: true, collections: true, themes: true }
+);
 ```
 
 And then you'll initialize Desirae with an *environment*.
