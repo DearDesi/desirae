@@ -38,7 +38,7 @@ tags              : ['http','url','website']
 relative_file     : /posts/foo/index.html
 
                     # excludes index.html
-relative_link     : /posts/foo/
+relative_href     : /posts/foo/
 
                     # actual url of this file, even if redirect
                     # excludes index.html

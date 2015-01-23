@@ -955,7 +955,7 @@
       , author: Desi.num2str(author)
       };
 
-      desi.allStyles = desi.styles;
+      desi.allStyles = desi.styles.slice(0);
       desi.styles = desi.styles.filter(function (str) {
         // TODO better matching
         return str.match('/' + themename + '/');
@@ -973,10 +973,12 @@
           compiled.push({ contents: html, path: path.join(entity.relative_file.replace(env.base_path, '')) });
         }
 
-        if (/\/index.html$/.test(entity.permalink)) {
-          entity.redirects.push(entity.permalink.replace(/\/index.html$/, '.html'));
-        } else if (/\.html$/.test(entity.permalink)) {
-          entity.redirects.push(entity.permalink.replace(/\.html?$/, '/index.html'));
+        // catches /a, /a/index.html, a/index.html
+        // but not index.html /index.html
+        if (/^.+\/(index\.x?html?)$/.test(entity.permalink)) {
+          entity.redirects.push(entity.permalink.replace(/\/(index.x?html?)?$/, '.html'));
+        } else if (/\.x?html?$/.test(entity.permalink)) {
+          entity.redirects.push(entity.permalink.replace(/\.x?html?$/, '/index.html'));
         } else {
           // found index, ignoring redirect
         }
