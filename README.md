@@ -19,7 +19,7 @@ It can also run entirely from the commandline (with io.js / node.js).
 
 **Features:**
 
-  * `JavaScript` - it's so stable it takes 10 years to get new any features.
+  * `JavaScript` - it's so stable it takes 10 years to get any new features.
     * Won't break every time you upgrade OS X and reinstall `brew` (*cough* ruby)
   * Decent use of `try { ... } catch(e) ...` and `promise.catch()`
     * the idea is that it shouldn't blow up at the slightest parse error without telling you which page is to blame (*cough* ruhoh *cough* jekyll)... bless me
