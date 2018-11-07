@@ -1,3 +1,8 @@
+Moved
+=====
+
+Now at <https://git.coolaj86.com/coolaj86/desirae.js>
+
 Did you mean DearDesi?
 ======================
 
@@ -58,7 +63,7 @@ Usage Overview
 
 (disclaimers)
 
-**Browser**: The default fs adapter will request the config files from `/api/fs/`. 
+**Browser**: The default fs adapter will request the config files from `/api/fs/`.
 
 **Node**: Remember that desirae is built browser-first, and optimized to reduce the number of round-trips
 (in case someone actually desides to host a Desi service, y'know?), so... the node adapter is built with
@@ -207,7 +212,7 @@ You need to start every file with a wrapper that is browser and io.js/node.js co
 /*jshint -W054 */
 ;(function (exports) {
   'use strict';
- 
+
   var DesiraeMyModule = {}
     ;
 
@@ -287,7 +292,7 @@ Desirae.registerDataMapper('ruhoh@3.0', function (view) {
   , author: {
       nickname: view.author.twitter
     }
-    // ... 
+    // ...
   };
 });
 ```
